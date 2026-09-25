@@ -9,10 +9,15 @@ This document consolidates the overarching business rules (BR-001 to BR-010) tha
 
 ---
 
-## BR-002: Launch Starting Bid Policy
-- **Opening Bid Amount**: At platform launch, the starting bid for every newly listed 60-second auction slot is strictly **₹1** (`₹1.00 INR`).
-- **Semantic Scope**: ₹1 is purely the initial price point for bid discovery; it is not a fixed or guaranteed clearing price.
-- **Rule Violation**: Any auction created with a starting bid below ₹1 or missing a starting bid is invalid.
+## BR-002: Operating-Day Auction Structure & Pricing
+- One operating day contains exactly **12 continuous auction hours**.
+- Each auction hour contains exactly **60 individual 60-second ad slots**.
+- Therefore each operating day contains exactly **720 sequential ad slots**.
+- The first slot of each operating day starts at **₹1**.
+- Every subsequent slot on the same operating day starts from the previous slot's closing price.
+- The hourly boundary does not reset the price.
+- The next operating day resets the starting price to **₹1**.
+- A starting price below ₹1 is invalid.
 
 ---
 
