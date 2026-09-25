@@ -53,6 +53,22 @@ export const DEMO_USERS: User[] = [
 
 export const INITIAL_ADS: Advertisement[] = [
   {
+    id: 'ad_house_grandmasterchess',
+    userId: 'system_60sec',
+    adType: 'HOUSE',
+    isHouseAd: true,
+    brandName: 'GrandmasterChess',
+    title: 'BEAT THE GRANDMASTER AI',
+    mediaUrl: 'https://www.grandmasterchess.in/og-image.png',
+    mediaType: 'image/png',
+    websiteUrl: 'https://www.grandmasterchess.in/',
+    status: 'ACTIVE',
+    approvalStatus: 'APPROVED',
+    createdAt: new Date('2026-09-01T00:00:00Z'),
+    updatedAt: new Date('2026-09-01T00:00:00Z'),
+  },
+
+  {
     id: 'ad_abc_shoes',
     userId: 'user_competing_1',
     brandName: 'ABC Shoes',
@@ -107,8 +123,8 @@ export const INITIAL_SCHEDULES: AdSchedule[] = [
   {
     id: 'sched_live_001',
     scheduleCode: 'SLOT-001',
-    advertisementId: 'ad_abc_shoes',
-    auctionId: 'auc_past_1',
+    advertisementId: 'ad_house_grandmasterchess',
+    auctionId: 'auc_house_001',
     startTime: liveStart,
     endTime: liveEnd,
     durationSeconds: 60,
@@ -122,6 +138,9 @@ export const INITIAL_AUCTIONS: Auction[] = [
   {
     id: 'auc_next_homepage_slot',
     advertisementId: 'ad_aurora',
+    operatingDay: new Date().toISOString().slice(0, 10),
+    auctionHour: 1,
+    slotNumber: 2,
     startingBid: 1.0,
     currentBid: 127.0,
     currentBidderId: 'user_competing_1',
