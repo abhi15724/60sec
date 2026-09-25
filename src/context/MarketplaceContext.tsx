@@ -28,6 +28,10 @@ import {
   calculateMinimumNextBid,
   validateAndApplyBid,
   closeAuction,
+  calculateOperatingDayStartingPrice,
+  getOperatingDayKey,
+  getSlotNumberInOperatingDay,
+  getAuctionHourForSlot,
 } from '../core/auction.ts';
 import {
   generateDemoPaymentSignature,
@@ -177,18 +181,20 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       (ad) => !(ad.isHouseAd || ad.adType === 'HOUSE') && ad.approvalStatus === 'APPROVED'
     );
 
-    // Carry over price: next auction starts from the previous auction's ending price.
-    const previousEndPrice = previousAuction
-      ? (previousAuction.currentBid !== null && previousAuction.currentBid > 0
-          ? previousAuction.currentBid
-          : previousAuction.startingBid)
-      : 1.0;
-
-    const startingBid = Math.max(1.0, previousEndPrice);
+    // Same operating day: continue from the previous closing price.
+    // New operating day: reset to $1. The same rule applies across Hour 1 → Hour 12.
+    const operatingDay = getOperatingDayKey(nextStart);
+    const startingBid = calculateOperatingDayStartingPrice(operatingDay, previousAuction);
+    const slotNumber = getSlotNumberInOperatingDay(
+      previousAuction?.slotNumber ? previousAuction.slotNumber + 1 : 1
+    );
 
     return {
       id: `auc_slot_${nextStart.getTime()}`,
       advertisementId: paidAuctionAds[0]?.id,
+      operatingDay,
+      auctionHour: getAuctionHourForSlot(slotNumber),
+      slotNumber,
       startingBid,
       currentBid: null,
       currentBidderId: null,
@@ -361,7 +367,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (!hasActive && prevAuctions.length > 0) {
           const lastAuction = prevAuctions[0];
           const newAuction = startNextAuction(ads, now, lastAuction);
-          setAuctionRemainingSeconds(90);
+          setAuctionRemainingSeconds(60);
           return [newAuction, ...prevAuctions];
         }
 
