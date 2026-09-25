@@ -134,3 +134,23 @@ export function bookNextScheduledSlot(request: ScheduleBookingRequest): AdSchedu
     createdAt: new Date(request.serverTime),
   };
 }
+
+
+export const AUCTION_HOURS_PER_OPERATING_DAY = 12;
+export const SLOTS_PER_AUCTION_HOUR = 60;
+export const SLOTS_PER_OPERATING_DAY = AUCTION_HOURS_PER_OPERATING_DAY * SLOTS_PER_AUCTION_HOUR;
+
+/** Returns the 1-based hourly session for a 1-based daily slot number. */
+export function getAuctionHourForSlot(slotNumber: number): number {
+  if (!Number.isInteger(slotNumber) || slotNumber < 1 || slotNumber > SLOTS_PER_OPERATING_DAY) {
+    throw new SchedulingError('INVALID_SLOT_NUMBER', 'Slot number must be an integer from 1 through 720.');
+  }
+  return Math.ceil(slotNumber / SLOTS_PER_AUCTION_HOUR);
+}
+
+/** Validates the complete 12-hour/720-slot operating-day inventory. */
+export function validateOperatingDayInventory(slotNumbers: ReadonlyArray<number>): boolean {
+  if (slotNumbers.length !== SLOTS_PER_OPERATING_DAY) return false;
+  const sorted = [...slotNumbers].sort((a, b) => a - b);
+  return sorted.every((slot, index) => slot === index + 1);
+}
