@@ -155,14 +155,29 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
   }, [bids, auctions]);
 
-  // Factory to start the next auction immediately, inheriting starting price from previous auction's ending price
+  // House ads are fallback inventory only. A paid + approved advertiser schedule always has priority.
+  const getHouseAds = useCallback((currentAds: Advertisement[]) => {
+    return currentAds.filter((ad) => ad.isHouseAd || ad.adType === 'HOUSE');
+  }, []);
+
+  const getNextHouseAd = useCallback((currentAds: Advertisement[], currentSchedules: AdSchedule[]) => {
+    const houseAds = getHouseAds(currentAds);
+    if (houseAds.length === 0) return undefined;
+
+    const houseIds = new Set(houseAds.map((ad) => ad.id));
+    const houseSlotsShown = currentSchedules.filter((schedule) => houseIds.has(schedule.advertisementId)).length;
+    return houseAds[houseSlotsShown % houseAds.length];
+  }, [getHouseAds]);
+
+  // Factory to start the next auction. It does not assign a house ad to a paid auction.
   const startNextAuction = useCallback((currentAds: Advertisement[], now: Date = new Date(), previousAuction?: Auction | null): Auction => {
     const nextStart = now;
-    const nextEnd = new Date(nextStart.getTime() + 90 * 1000); // 90 seconds fresh bidding period
-    const pool = currentAds.length > 0 ? currentAds : INITIAL_ADS;
-    const randomAd = pool[Math.floor(Math.random() * pool.length)];
+    const nextEnd = new Date(nextStart.getTime() + 90 * 1000); // demo bidding period
+    const paidAuctionAds = currentAds.filter(
+      (ad) => !(ad.isHouseAd || ad.adType === 'HOUSE') && ad.approvalStatus === 'APPROVED'
+    );
 
-    // Carry over price: Next auction price starts from the previous auction price end
+    // Carry over price: next auction starts from the previous auction's ending price.
     const previousEndPrice = previousAuction
       ? (previousAuction.currentBid !== null && previousAuction.currentBid > 0
           ? previousAuction.currentBid
@@ -173,7 +188,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     return {
       id: `auc_slot_${nextStart.getTime()}`,
-      advertisementId: randomAd.id,
+      advertisementId: paidAuctionAds[0]?.id,
       startingBid,
       currentBid: null,
       currentBidderId: null,
@@ -258,15 +273,21 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             // Next sequential continuous 60s broadcast slot
             const slotSeqNum = updated.length + 1;
             const scheduleCode = `SLOT-${String(slotSeqNum).padStart(3, '0')}`;
-            const pool = ads.length > 0 ? ads : INITIAL_ADS;
-            const nextAd = pool[(slotSeqNum - 1) % pool.length];
+            // Until a real paid advertiser is scheduled, rotate the two house ads.
+            const nextPaidSlot = updated.find((s) => {
+              const ad = ads.find((item) => item.id === s.advertisementId);
+              return s.status === 'SCHEDULED' && ad && !(ad.isHouseAd || ad.adType === 'HOUSE');
+            });
+            const nextAd = nextPaidSlot
+              ? ads.find((ad) => ad.id === nextPaidSlot.advertisementId)
+              : getNextHouseAd(ads, updated);
             const slotStart = now;
             const slotEnd = new Date(slotStart.getTime() + 60 * 1000);
 
             const autoSlot: AdSchedule = {
               id: `sched_slot_${nowMs}`,
               scheduleCode,
-              advertisementId: nextAd.id,
+              advertisementId: nextAd?.id || INITIAL_ADS.find((ad) => ad.isHouseAd || ad.adType === 'HOUSE')?.id || INITIAL_ADS[0].id,
               auctionId: `auc_slot_${nowMs}`,
               startTime: slotStart,
               endTime: slotEnd,
@@ -290,7 +311,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           const firstSlot: AdSchedule = {
             id: `sched_live_${nowMs}`,
             scheduleCode: 'SLOT-001',
-            advertisementId: ads[0]?.id || INITIAL_ADS[0].id,
+            advertisementId: getNextHouseAd(ads, prevSchedules)?.id || INITIAL_ADS.find((ad) => ad.isHouseAd || ad.adType === 'HOUSE')?.id || INITIAL_ADS[0].id,
             auctionId: 'auc_live_001',
             startTime: slotStart,
             endTime: slotEnd,
@@ -349,7 +370,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [ads, startNextAuction]);
+  }, [ads, startNextAuction, getNextHouseAd]);
 
   // Automated simulated settlement for competing demo winners after 4 seconds
   useEffect(() => {
@@ -477,6 +498,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const newAd: Advertisement = {
         id: `ad_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         userId: sanitized.userId,
+        adType: 'COMMERCIAL',
+        isHouseAd: false,
         brandName: sanitized.brandName,
         title: sanitized.title,
         mediaUrl: sanitized.mediaUrl,
