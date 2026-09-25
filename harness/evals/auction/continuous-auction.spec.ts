@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { closeAuction, calculateMinimumNextBid, validateAndApplyBid } from '../../../src/core/auction.ts';
+import { closeAuction, calculateMinimumNextBid, validateAndApplyBid, calculateOperatingDayStartingPrice } from '../../../src/core/auction.ts';
 import { assertAtMostOneActiveNextSlotAuction } from '../../../src/core/slot.ts';
 import { Auction } from '../../../src/core/types.ts';
 
@@ -160,4 +160,29 @@ describe('CONTINUOUS AUCTION SUCCESSION EVALUATION', () => {
     );
     expect(secondMinBid).toBe(176.0);
   });
+
+  it('continues the closing price across same-day slots but resets at the next operating day', () => {
+    const day = '2026-09-25';
+    const nextDay = '2026-09-26';
+    const previous = {
+      operatingDay: day,
+      currentBid: 12000,
+      startingBid: 1,
+    } as Auction;
+
+    expect(calculateOperatingDayStartingPrice(day, previous)).toBe(12000);
+    expect(calculateOperatingDayStartingPrice(nextDay, previous)).toBe(1);
+    expect(calculateOperatingDayStartingPrice(day, null)).toBe(1);
+  });
+
+  it('does not reset price at an hourly boundary on the same operating day', () => {
+    const previous = {
+      operatingDay: '2026-09-25',
+      currentBid: 500,
+      startingBid: 250,
+    } as Auction;
+
+    expect(calculateOperatingDayStartingPrice('2026-09-25', previous)).toBe(500);
+  });
+
 });

@@ -127,3 +127,14 @@ export function computeNextAvailableSlot(input: ScheduleCalculationInput): { sta
     }).format(d);
   }
   ```
+
+
+## 6. Operating-Day Inventory & House-Ad Fallback
+- Each operating day has exactly 12 continuous one-hour auction sessions.
+- Each session contains exactly 60 sequential 60-second ad slots.
+- Total daily inventory is exactly 720 slots.
+- A commercial slot may go LIVE only when its advertisement is APPROVED and its auction payment is VERIFIED.
+- If no paid + approved advertisement is scheduled for a slot, the scheduler may use the configured 60SEC HOUSE advertisement.
+- The house advertisement is not an auction winner, is not paid commercial inventory, and must never replace a paid + approved scheduled advertisement.
+- House-ad analytics must remain separate from commercial advertiser analytics.
+- When an eligible paid + approved advertisement exists for the next slot, it takes priority over the house advertisement.

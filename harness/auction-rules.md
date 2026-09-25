@@ -8,7 +8,7 @@ This document codifies the technical specifications and verification invariants 
 
 | Rule ID | Title | Summary |
 |---|---|---|
-| **AUCTION-001** | Starting Bid Default | Opening bid for every auction is strictly ₹1 INR (`₹1.00`). |
+| **AUCTION-001** | Daily Starting Bid | First slot of each operating day starts at ₹1; later same-day slots inherit the previous closing price. |
 | **AUCTION-002** | Bid Superiority Requirement | A new bid amount must be strictly greater than the current leading bid. |
 | **AUCTION-003** | Minimum Increment Formula | Next minimum bid = $\text{current\_bid} + 1$ (or starting bid if zero bids placed). |
 | **AUCTION-004** | Authoritative Expiry Cutoff | Bids submitted at or after the server's UTC `end_time` are rejected. |
@@ -24,12 +24,13 @@ This document codifies the technical specifications and verification invariants 
 
 ## 2. Detailed Technical Specifications
 
-### AUCTION-001: Opening Bid
-- An auction entity requires `starting_bid = 1`.
-- When an auction is newly opened and has 0 bids recorded:
-  $$\text{current\_bid} = 0 \quad (\text{or null})$$
-  $$\text{minimum\_next\_bid} = 1$$
-- Once the first bid of ₹1 is placed, `current_bid` becomes ₹1, and `minimum_next_bid` becomes ₹2.
+### AUCTION-001: Operating-Day Price Continuity
+- The first slot of every operating day starts at ₹1.
+- Every subsequent slot on the same operating day starts at the immediately preceding slot's closing price.
+- Hourly session boundaries do not reset the price.
+- The first slot of the next operating day resets to ₹1.
+- Previous-day closing price must never carry into the next operating day.
+- If the previous slot received no bid, its effective closing price is its starting price.
 
 ### AUCTION-002 & AUCTION-003: Increment Logic
 - Formula:
