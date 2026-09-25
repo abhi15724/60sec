@@ -5,6 +5,18 @@
 
 import { AdSchedule, Advertisement, PaymentRecord } from './types.ts';
 
+export const AUCTION_HOURS_PER_OPERATING_DAY = 12;
+export const SLOTS_PER_AUCTION_HOUR = 60;
+export const SLOTS_PER_OPERATING_DAY = 720;
+
+export function getAuctionHourForSlot(slotNumber: number): number {
+  return Math.floor((slotNumber - 1) / SLOTS_PER_AUCTION_HOUR) + 1;
+}
+
+export function validateOperatingDayInventory(slotNumbers: number[]): boolean {
+  return slotNumbers.every((n) => Number.isInteger(n) && n >= 1 && n <= SLOTS_PER_OPERATING_DAY);
+}
+
 export class SchedulingError extends Error {
   constructor(public code: string, message: string) {
     super(message);
