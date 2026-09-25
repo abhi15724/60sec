@@ -15,10 +15,12 @@ export interface User {
 
 export type AdApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type AdStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
+export type AdvertisementType = 'COMMERCIAL' | 'HOUSE';
 
 export interface Advertisement {
   id: string;
   userId: string;
+  adType?: AdvertisementType;
   brandName: string;
   title: string;
   mediaUrl: string;
@@ -26,6 +28,7 @@ export interface Advertisement {
   websiteUrl: string;
   status: AdStatus;
   approvalStatus: AdApprovalStatus;
+  isHouseAd?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,13 +44,16 @@ export type AuctionStatus =
 export interface Auction {
   id: string;
   advertisementId?: string;
-  startingBid: number; // strictly >= 1.00
+  startingBid: number;
   currentBid: number | null;
   currentBidderId: string | null;
   startTime: Date;
   endTime: Date;
   status: AuctionStatus;
   createdAt: Date;
+  operatingDay?: string;
+  auctionHour?: number;
+  slotNumber?: number;
 }
 
 export interface Bid {
@@ -85,6 +91,9 @@ export interface AdSchedule {
   durationSeconds: 60;
   status: ScheduleStatus;
   createdAt: Date;
+  operatingDay?: string;
+  auctionHour?: number;
+  slotNumber?: number;
 }
 
 export type AdEventType =
