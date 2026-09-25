@@ -142,8 +142,8 @@ export const INITIAL_AUCTIONS: Auction[] = [
     startingBid: 1.0,
     currentBid: 127.0,
     currentBidderId: 'user_competing_1',
-    startTime: new Date(nowMs - 120 * 1000),
-    endTime: new Date(nowMs + 112 * 1000), // ~00:01:52 remaining
+    startTime: new Date(nowMs),
+    endTime: new Date(nowMs + 60 * 1000), // exactly 60 seconds remaining
     status: 'ACTIVE',
     createdAt: new Date(nowMs - 120 * 1000),
   },
