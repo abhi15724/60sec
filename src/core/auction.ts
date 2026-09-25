@@ -28,6 +28,20 @@ export function calculateMinimumNextBid(currentBid: number | null, startingBid: 
   return currentBid + 1.0;
 }
 
+/**
+ * Returns the starting price for the next slot.
+ * First slot of each operating day resets to $1.
+ * Subsequent slots in the same operating day inherit the previous closing price,
+ * including across hourly session boundaries.
+ */
+export function calculateOperatingDayStartingPrice(
+  operatingDay: string,
+  previousAuction?: Pick<Auction, 'operatingDay' | 'currentBid' | 'startingBid'> | null
+): number {
+  if (!previousAuction || previousAuction.operatingDay !== operatingDay) return 1.0;
+  return Math.max(1.0, previousAuction.currentBid ?? previousAuction.startingBid);
+}
+
 export interface BidValidationResult {
   accepted: boolean;
   updatedAuction: Auction;
