@@ -5,6 +5,23 @@
 
 import { Auction, Bid, OutbidNotification } from './types.ts';
 
+export const AUCTION_HOURS_PER_OPERATING_DAY = 12;
+export const SLOTS_PER_AUCTION_HOUR = 60;
+export const SLOTS_PER_OPERATING_DAY = AUCTION_HOURS_PER_OPERATING_DAY * SLOTS_PER_AUCTION_HOUR;
+
+/** Calendar key used by the demo until the exact operating-day timezone/window is configured. */
+export function getOperatingDayKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+export function getSlotNumberInOperatingDay(sequenceNumber: number): number {
+  return ((sequenceNumber - 1) % SLOTS_PER_OPERATING_DAY) + 1;
+}
+
+export function getAuctionHourForSlot(slotNumber: number): number {
+  return Math.floor((slotNumber - 1) / SLOTS_PER_AUCTION_HOUR) + 1;
+}
+
 export class AuctionError extends Error {
   constructor(public code: string, message: string) {
     super(message);
