@@ -54,7 +54,9 @@ export const DEMO_USERS: User[] = [
 export const INITIAL_ADS: Advertisement[] = [
   {
     id: 'ad_abc_shoes',
-    userId: 'user_competing_1',
+    userId: 'system_60sec',
+    adType: 'HOUSE',
+    isHouseAd: true,
     brandName: 'ABC Shoes',
     title: 'AirStride Ultra — Flat 40% OFF Today',
     mediaUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1600&q=85',
@@ -64,6 +66,21 @@ export const INITIAL_ADS: Advertisement[] = [
     approvalStatus: 'APPROVED',
     createdAt: new Date(Date.now() - 3600 * 1000 * 5),
     updatedAt: new Date(Date.now() - 3600 * 1000 * 4),
+  },
+  {
+    id: 'ad_house_grandmasterchess',
+    userId: 'system_60sec',
+    adType: 'HOUSE',
+    isHouseAd: true,
+    brandName: 'GrandmasterChess',
+    title: 'BEAT THE GRANDMASTER AI',
+    mediaUrl: 'https://www.grandmasterchess.in/og-image.png',
+    mediaType: 'image/png',
+    websiteUrl: 'https://www.grandmasterchess.in/',
+    status: 'ACTIVE',
+    approvalStatus: 'APPROVED',
+    createdAt: new Date(Date.now() - 3600 * 1000 * 3),
+    updatedAt: new Date(Date.now() - 3600 * 1000 * 2),
   },
   {
     id: 'ad_aurora',
