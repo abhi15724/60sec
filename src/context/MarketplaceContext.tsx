@@ -161,7 +161,6 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const nextStart = now;
     const nextEnd = new Date(nextStart.getTime() + 90 * 1000);
     const operatingDay = nextStart.toISOString().slice(0, 10);
-    const previousDay = previousAuction?.operatingDay;
     const startingBid = calculateOperatingDayStartingPrice(operatingDay, previousAuction);
     const nextSlotNumber = (previousAuction?.slotNumber || 1) + 1;
     const auctionHour = Math.ceil(nextSlotNumber / 60);
@@ -256,9 +255,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             // Next sequential continuous 60s broadcast slot
             const slotSeqNum = updated.length + 1;
             const scheduleCode = `SLOT-${String(slotSeqNum).padStart(3, '0')}`;
-            const commercialCandidates = ads.filter((a) => a.adType !== 'HOUSE' && a.approvalStatus === 'APPROVED' && a.status === 'ACTIVE');
-            const paidScheduled = updated.find((s) => s.status === 'SCHEDULED' && s.startTime.getTime() <= nowMs + 1000);
-            const nextAdId = paidScheduled?.advertisementId || 'ad_house_grandmasterchess';
+            // A scheduled slot exists only after verified payment + approval.
+            // If no such slot is queued, use the GrandmasterChess house ad.
+            const nextAdId = 'ad_house_grandmasterchess';
             const slotStart = now;
             const slotEnd = new Date(slotStart.getTime() + 60 * 1000);
 
