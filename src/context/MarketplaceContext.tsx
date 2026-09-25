@@ -26,6 +26,7 @@ import {
 } from '../core/store.ts';
 import {
   calculateMinimumNextBid,
+  calculateOperatingDayStartingPrice,
   validateAndApplyBid,
   closeAuction,
 } from '../core/auction.ts';
@@ -158,22 +159,19 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Factory to start the next auction immediately, inheriting starting price from previous auction's ending price
   const startNextAuction = useCallback((currentAds: Advertisement[], now: Date = new Date(), previousAuction?: Auction | null): Auction => {
     const nextStart = now;
-    const nextEnd = new Date(nextStart.getTime() + 90 * 1000); // 90 seconds fresh bidding period
-    const pool = currentAds.length > 0 ? currentAds : INITIAL_ADS;
-    const randomAd = pool[Math.floor(Math.random() * pool.length)];
-
-    // Carry over price: Next auction price starts from the previous auction price end
-    const previousEndPrice = previousAuction
-      ? (previousAuction.currentBid !== null && previousAuction.currentBid > 0
-          ? previousAuction.currentBid
-          : previousAuction.startingBid)
-      : 1.0;
-
-    const startingBid = Math.max(1.0, previousEndPrice);
+    const nextEnd = new Date(nextStart.getTime() + 90 * 1000);
+    const operatingDay = nextStart.toISOString().slice(0, 10);
+    const previousDay = previousAuction?.operatingDay;
+    const startingBid = calculateOperatingDayStartingPrice(operatingDay, previousAuction);
+    const nextSlotNumber = (previousAuction?.slotNumber || 1) + 1;
+    const auctionHour = Math.ceil(nextSlotNumber / 60);
 
     return {
       id: `auc_slot_${nextStart.getTime()}`,
-      advertisementId: randomAd.id,
+      advertisementId: undefined,
+      operatingDay,
+      auctionHour,
+      slotNumber: nextSlotNumber,
       startingBid,
       currentBid: null,
       currentBidderId: null,
@@ -258,15 +256,16 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             // Next sequential continuous 60s broadcast slot
             const slotSeqNum = updated.length + 1;
             const scheduleCode = `SLOT-${String(slotSeqNum).padStart(3, '0')}`;
-            const pool = ads.length > 0 ? ads : INITIAL_ADS;
-            const nextAd = pool[(slotSeqNum - 1) % pool.length];
+            const commercialCandidates = ads.filter((a) => a.adType !== 'HOUSE' && a.approvalStatus === 'APPROVED' && a.status === 'ACTIVE');
+            const paidScheduled = updated.find((s) => s.status === 'SCHEDULED' && s.startTime.getTime() <= nowMs + 1000);
+            const nextAdId = paidScheduled?.advertisementId || 'ad_house_grandmasterchess';
             const slotStart = now;
             const slotEnd = new Date(slotStart.getTime() + 60 * 1000);
 
             const autoSlot: AdSchedule = {
               id: `sched_slot_${nowMs}`,
               scheduleCode,
-              advertisementId: nextAd.id,
+              advertisementId: nextAdId,
               auctionId: `auc_slot_${nowMs}`,
               startTime: slotStart,
               endTime: slotEnd,
@@ -290,7 +289,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           const firstSlot: AdSchedule = {
             id: `sched_live_${nowMs}`,
             scheduleCode: 'SLOT-001',
-            advertisementId: ads[0]?.id || INITIAL_ADS[0].id,
+            advertisementId: 'ad_house_grandmasterchess',
             auctionId: 'auc_live_001',
             startTime: slotStart,
             endTime: slotEnd,
@@ -351,7 +350,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return () => clearInterval(timer);
   }, [ads, startNextAuction]);
 
-  // Automated simulated settlement for competing demo winners after 4 seconds
+  // Demo-only competitor settlement removed: commercial payments must be explicitly verified.
+  /*
   useEffect(() => {
     const competitorAwaiting = auctions.find(
       (a) => a.status === 'AWAITING_PAYMENT' && a.currentBidderId && a.currentBidderId !== currentUser.id
@@ -364,6 +364,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     return () => clearTimeout(timeout);
   }, [auctions, currentUser.id]);
+  */
 
   // Invariant verification on state change
   useEffect(() => {
