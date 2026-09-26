@@ -53,10 +53,10 @@ export function calculateMinimumNextBid(currentBid: number | null, startingBid: 
  * including across hourly session boundaries.
  */
 export function calculateOperatingDayStartingPrice(
-  operatingDay: string,
+  operatingDay: string | null,
   previousAuction?: Pick<Auction, 'operatingDay' | 'currentBid' | 'startingBid'> | null
 ): number {
-  if (!previousAuction || previousAuction.operatingDay !== operatingDay) return 1.0;
+  if (!operatingDay || !previousAuction || previousAuction.operatingDay !== operatingDay) return 1.0;
   return Math.max(1.0, previousAuction.currentBid ?? previousAuction.startingBid);
 }
 
