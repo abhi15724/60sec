@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext.tsx';
-import { User, Shield, Menu, X } from 'lucide-react';
+import { User, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
   currentView: 'homepage' | 'dashboard' | 'admin';
@@ -9,7 +9,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onOpenCreateAd }) => {
-  const { currentUser, switchUser, currentLiveSchedule, liveRemainingSeconds } = useMarketplace();
+  const { currentUser, currentLiveSchedule, liveRemainingSeconds } = useMarketplace();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -82,38 +82,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onO
               </div>
             )}
 
-            {/* Persona Switcher */}
-            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
-              <button
-                onClick={() => {
-                  switchUser('advertiser');
-                  if (currentView === 'admin') setCurrentView('homepage');
-                }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md font-medium transition cursor-pointer touch-manipulation ${
-                  currentUser.role === 'advertiser'
-                    ? 'bg-white text-slate-900 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <User className="h-3.5 w-3.5" />
-                <span className="hidden lg:inline">Advertiser</span>
-              </button>
-              <button
-                onClick={() => {
-                  switchUser('admin');
-                  setCurrentView('admin');
-                }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md font-medium transition cursor-pointer touch-manipulation ${
-                  currentUser.role === 'admin'
-                    ? 'bg-slate-950 text-white shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Shield className="h-3.5 w-3.5" />
-                <span className="hidden lg:inline">Admin</span>
-              </button>
-            </div>
-
             {/* Quick Create Ad CTA */}
             <button
               onClick={onOpenCreateAd}
@@ -175,47 +143,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onO
             >
               My Bids
             </button>
-            <button
-              onClick={() => {
-                switchUser('admin');
-                setCurrentView('admin');
-                setMobileMenuOpen(false);
-              }}
-              className={`px-3 py-2.5 text-sm font-medium rounded-xl text-left flex items-center gap-2 touch-manipulation ${
-                currentView === 'admin' ? 'bg-slate-950 text-white font-bold' : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <Shield className="h-4 w-4" />
-              <span>Operator Console & Harness</span>
-            </button>
           </div>
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2.5">
-            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs flex-1">
-              <button
-                onClick={() => {
-                  switchUser('advertiser');
-                  if (currentView === 'admin') setCurrentView('homepage');
-                }}
-                className={`w-1/2 py-2 text-center font-medium rounded-md transition touch-manipulation ${
-                  currentUser.role === 'advertiser' ? 'bg-white font-bold text-slate-900 shadow-xs' : 'text-slate-600'
-                }`}
-              >
-                Advertiser
-              </button>
-              <button
-                onClick={() => {
-                  switchUser('admin');
-                  setCurrentView('admin');
-                }}
-                className={`w-1/2 py-2 text-center font-medium rounded-md transition touch-manipulation ${
-                  currentUser.role === 'admin' ? 'bg-slate-900 text-white font-bold' : 'text-slate-600'
-                }`}
-              >
-                Admin
-              </button>
-            </div>
-
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
