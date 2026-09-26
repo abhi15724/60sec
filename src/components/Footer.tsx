@@ -3,13 +3,11 @@ import React from 'react';
 interface FooterProps {
   onNavigateHowItWorks: () => void;
   onOpenCreateAd: () => void;
-  onOpenAdmin: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onNavigateHowItWorks,
   onOpenCreateAd,
-  onOpenAdmin,
 }) => {
   return (
     <footer className="bg-white border-t border-slate-200 py-10 sm:py-14 text-slate-600">
@@ -57,21 +55,14 @@ export const Footer: React.FC<FooterProps> = ({
             </ul>
           </div>
 
-          {/* Operator & Harness Status */}
+          {/* Platform Status */}
           <div>
             <div className="text-xs font-bold uppercase tracking-wider text-slate-950 mb-2.5">
-              Platform & Console
+              Platform
             </div>
-            <p className="text-xs text-slate-500 mb-2">
+            <p className="text-xs text-slate-500 leading-relaxed">
               Strict mathematical single-slot duration and sequential non-overlapping queue.
             </p>
-            <button
-              type="button"
-              onClick={onOpenAdmin}
-              className="text-xs font-semibold text-slate-900 underline hover:text-slate-700 transition cursor-pointer py-1 touch-manipulation block"
-            >
-              Operator Console & Harness (34/34 Tests) →
-            </button>
           </div>
         </div>
 
