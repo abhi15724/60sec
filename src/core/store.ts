@@ -149,7 +149,7 @@ export const INITIAL_AUCTIONS: Auction[] = [
     auctionHour: 1,
     slotNumber: 2,
     startTime: new Date(nowMs),
-    endTime: new Date(nowMs + 60 * 1000), // exactly 60 seconds remaining
+    endTime: new Date(nowMs + 60 * 60 * 1000), // one-hour auction
     status: 'ACTIVE',
     createdAt: new Date(nowMs - 120 * 1000),
   },
