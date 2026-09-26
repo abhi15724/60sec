@@ -188,9 +188,12 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     // New operating day: reset to $1. The same rule applies across Hour 1 → Hour 12.
     const operatingDay = getOperatingDayKey(nextStart);
     const startingBid = calculateOperatingDayStartingPrice(operatingDay, previousAuction);
-    const slotNumber = getSlotNumberInOperatingDay(
-      previousAuction?.slotNumber ? previousAuction.slotNumber + 1 : 1
-    );
+    // One auction = one full hour = 60 broadcast slots.
+    // Auction 1 covers slots 001–060, auction 2 covers 061–120, etc.
+    const auctionStartSlot = previousAuction?.slotNumber
+      ? previousAuction.slotNumber + 60
+      : 1;
+    const slotNumber = getSlotNumberInOperatingDay(auctionStartSlot);
 
     return {
       id: `auc_slot_${nextStart.getTime()}`,
