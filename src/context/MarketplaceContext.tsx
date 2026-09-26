@@ -113,7 +113,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const [currentLiveSchedule, setCurrentLiveSchedule] = useState<AdSchedule | null>(INITIAL_SCHEDULES[0]);
   const [liveRemainingSeconds, setLiveRemainingSeconds] = useState<number>(60);
-  const [auctionRemainingSeconds, setAuctionRemainingSeconds] = useState<number>(60);
+  const [auctionRemainingSeconds, setAuctionRemainingSeconds] = useState<number>(3600);
 
   // Switch between advertiser and admin personas
   const switchUser = (role: 'advertiser' | 'admin') => {
@@ -179,7 +179,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Factory to start the next auction. It does not assign a house ad to a paid auction.
   const startNextAuction = useCallback((currentAds: Advertisement[], now: Date = new Date(), previousAuction?: Auction | null): Auction => {
     const nextStart = now;
-    const nextEnd = new Date(nextStart.getTime() + 60 * 1000); // exactly 60 seconds
+    const nextEnd = new Date(nextStart.getTime() + 60 * 60 * 1000); // one-hour auction
     const paidAuctionAds = currentAds.filter(
       (ad) => !(ad.isHouseAd || ad.adType === 'HOUSE') && ad.approvalStatus === 'APPROVED'
     );
@@ -394,7 +394,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             timestamp: now,
           });
 
-          setAuctionRemainingSeconds(60);
+          setAuctionRemainingSeconds(3600);
           return [newAuction, ...prevAuctions.map((a) => (a.id === active.id ? closed : a))];
         } else if (active) {
           const rem = Math.max(0, active.endTime.getTime() - nowMs);
