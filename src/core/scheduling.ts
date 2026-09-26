@@ -9,6 +9,55 @@ export const AUCTION_HOURS_PER_OPERATING_DAY = 12;
 export const SLOTS_PER_AUCTION_HOUR = 60;
 export const SLOTS_PER_OPERATING_DAY = 720;
 
+/**
+ * 60SEC operating day: 09:00–21:00 IST, every day.
+ * The 12-hour window is continuous; there is no hourly price reset.
+ */
+export const OPERATING_DAY_TIME_ZONE = 'Asia/Kolkata';
+export const OPERATING_DAY_START_HOUR_IST = 9;
+export const OPERATING_DAY_END_HOUR_IST = 21;
+
+function istDateParts(date: Date): { year: number; month: number; day: number; hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: OPERATING_DAY_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return { year: get('year'), month: get('month'), day: get('day'), hour: get('hour'), minute: get('minute') };
+}
+
+function isoDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export function getOperatingDayKey(date: Date): string | null {
+  const p = istDateParts(date);
+  const minuteOfDay = p.hour * 60 + p.minute;
+  if (minuteOfDay < OPERATING_DAY_START_HOUR_IST * 60 || minuteOfDay >= OPERATING_DAY_END_HOUR_IST * 60) {
+    return null;
+  }
+  return isoDate(p.year, p.month, p.day);
+}
+
+export function getOperatingDayWindow(date: Date): { start: Date; end: Date; key: string } | null {
+  const p = istDateParts(date);
+  const minuteOfDay = p.hour * 60 + p.minute;
+  if (minuteOfDay < OPERATING_DAY_START_HOUR_IST * 60 || minuteOfDay >= OPERATING_DAY_END_HOUR_IST * 60) {
+    return null;
+  }
+  const key = isoDate(p.year, p.month, p.day);
+  return {
+    start: new Date(`${key}T09:00:00+05:30`),
+    end: new Date(`${key}T21:00:00+05:30`),
+    key,
+  };
+}
+
 export function getAuctionHourForSlot(slotNumber: number): number {
   return Math.floor((slotNumber - 1) / SLOTS_PER_AUCTION_HOUR) + 1;
 }
