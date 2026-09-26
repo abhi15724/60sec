@@ -295,7 +295,11 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             return activated;
           } else {
             // Next sequential continuous 60s broadcast slot
-            const slotSeqNum = updated.length + 1;
+            const operatingDay = getOperatingDayKey(now);
+            const lastSameDaySlot = updated
+              .filter((s) => s.operatingDay === operatingDay && typeof s.slotNumber === 'number')
+              .reduce((max, s) => Math.max(max, s.slotNumber || 0), 0);
+            const slotSeqNum = lastSameDaySlot + 1;
             const scheduleCode = `SLOT-${String(slotSeqNum).padStart(3, '0')}`;
             // Until a real paid advertiser is scheduled, rotate the two house ads.
             const nextPaidSlot = updated.find((s) => {
@@ -313,6 +317,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
               scheduleCode,
               advertisementId: nextAd?.id || INITIAL_ADS.find((ad) => ad.isHouseAd || ad.adType === 'HOUSE')?.id || INITIAL_ADS[0].id,
               auctionId: `auc_slot_${nowMs}`,
+              operatingDay: operatingDay || undefined,
+              auctionHour: operatingDay ? getAuctionHourForSlot(slotSeqNum) : undefined,
+              slotNumber: operatingDay ? slotSeqNum : undefined,
               startTime: slotStart,
               endTime: slotEnd,
               durationSeconds: 60,
@@ -332,11 +339,19 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           // Fallback if no live slot exists
           const slotStart = now;
           const slotEnd = new Date(slotStart.getTime() + 60 * 1000);
+          const operatingDay = getOperatingDayKey(now);
+          const lastSameDaySlot = prevSchedules
+            .filter((s) => s.operatingDay === operatingDay && typeof s.slotNumber === 'number')
+            .reduce((max, s) => Math.max(max, s.slotNumber || 0), 0);
+          const slotSeqNum = lastSameDaySlot + 1;
           const firstSlot: AdSchedule = {
             id: `sched_live_${nowMs}`,
-            scheduleCode: 'SLOT-001',
+            scheduleCode: `SLOT-${String(slotSeqNum).padStart(3, '0')}`,
             advertisementId: getNextHouseAd(ads, prevSchedules)?.id || INITIAL_ADS.find((ad) => ad.isHouseAd || ad.adType === 'HOUSE')?.id || INITIAL_ADS[0].id,
             auctionId: 'auc_live_001',
+            operatingDay: operatingDay || undefined,
+            auctionHour: operatingDay ? getAuctionHourForSlot(slotSeqNum) : undefined,
+            slotNumber: operatingDay ? slotSeqNum : undefined,
             startTime: slotStart,
             endTime: slotEnd,
             durationSeconds: 60,
