@@ -34,6 +34,9 @@ import {
   getAuctionHourForSlot,
 } from '../core/auction.ts';
 import {
+  getOperatingDayWindow,
+} from '../core/scheduling.ts';
+import {
   generateDemoPaymentSignature,
   verifyAuctionPayment,
 } from '../core/payment.ts';
@@ -250,10 +253,25 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const timer = setInterval(() => {
       const now = new Date();
       const nowMs = now.getTime();
+      const operatingWindow = getOperatingDayWindow(now);
 
       // 1. Advance the single live homepage schedule and update liveRemainingSeconds actively every second
       setSchedules((prevSchedules) => {
         const liveSlot = prevSchedules.find((s) => s.status === 'LIVE');
+
+        if (!operatingWindow) {
+          if (liveSlot) {
+            const completed = prevSchedules.map((s) =>
+              s.id === liveSlot.id ? { ...s, status: 'COMPLETED' as const, endTime: now } : s
+            );
+            setCurrentLiveSchedule(null);
+            setLiveRemainingSeconds(0);
+            return completed;
+          }
+          setCurrentLiveSchedule(null);
+          setLiveRemainingSeconds(0);
+          return prevSchedules;
+        }
 
         if (liveSlot && nowMs >= liveSlot.endTime.getTime()) {
           // Current 60-second broadcast completed!
@@ -337,10 +355,18 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setAuctions((prevAuctions) => {
         const active = prevAuctions.find((a) => a.status === 'ACTIVE');
 
+        if (!operatingWindow) {
+          if (active) {
+            const closed = closeAuction({ ...active, endTime: now }, now);
+            return prevAuctions.map((a) => (a.id === active.id ? closed : a));
+          }
+          setAuctionRemainingSeconds(0);
+          return prevAuctions;
+        }
+
         if (active && nowMs >= active.endTime.getTime()) {
-          // Authoritatively close active auction
+          // Authoritatively close active auction, then continue at the previous closing price.
           const closed = closeAuction(active, now);
-          // And launch the other/next auction immediately, starting from previous auction ending price!
           const newAuction = startNextAuction(ads, now, active);
 
           const winner = DEMO_USERS.find((u) => u.id === closed.currentBidderId);
@@ -364,7 +390,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
         // If somehow no auction is ACTIVE, start one inheriting from the latest auction!
         const hasActive = prevAuctions.some((a) => a.status === 'ACTIVE');
-        if (!hasActive && prevAuctions.length > 0) {
+        if (!hasActive && prevAuctions.length > 0 && operatingWindow) {
           const lastAuction = prevAuctions[0];
           const newAuction = startNextAuction(ads, now, lastAuction);
           setAuctionRemainingSeconds(60);
