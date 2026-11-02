@@ -24,6 +24,7 @@ export const CreateAdModal: React.FC<CreateAdModalProps> = ({ isOpen, onClose, o
   const [mediaType] = useState<'image/jpeg' | 'image/png' | 'image/webp' | 'video/mp4'>('image/jpeg');
   const [websiteUrl, setWebsiteUrl] = useState('https://abcshoes.com');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [imagePreviewError, setImagePreviewError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
   // Keyboard Escape listener & Lock background scroll
@@ -189,7 +190,10 @@ export const CreateAdModal: React.FC<CreateAdModalProps> = ({ isOpen, onClose, o
                 <input
                   type="url"
                   value={mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
+                  onChange={(e) => {
+                    setMediaUrl(e.target.value);
+                    setImagePreviewError(null);
+                  }}
                   placeholder="https://..."
                   required
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:border-transparent touch-manipulation"
@@ -203,7 +207,10 @@ export const CreateAdModal: React.FC<CreateAdModalProps> = ({ isOpen, onClose, o
                   <button
                     key={preset.label}
                     type="button"
-                    onClick={() => setMediaUrl(preset.url)}
+                    onClick={() => {
+                      setMediaUrl(preset.url);
+                      setImagePreviewError(null);
+                    }}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer shrink-0 touch-manipulation ${
                       mediaUrl === preset.url
                         ? 'bg-slate-950 text-white'
@@ -214,6 +221,11 @@ export const CreateAdModal: React.FC<CreateAdModalProps> = ({ isOpen, onClose, o
                   </button>
                 ))}
               </div>
+              {imagePreviewError ? (
+                <p role="alert" className="mt-2 text-[11px] text-rose-600">{imagePreviewError}</p>
+              ) : (
+                <p className="mt-2 text-[11px] text-slate-500">Preview updates from your URL. If it stays blank, check that the link opens the image file directly and is publicly accessible.</p>
+              )}
             </div>
 
             {/* Website URL */}
@@ -246,14 +258,18 @@ export const CreateAdModal: React.FC<CreateAdModalProps> = ({ isOpen, onClose, o
               </span>
               <div className="p-3 rounded-xl bg-slate-950 text-white flex items-center gap-3">
                 <div className="h-14 w-20 sm:h-16 sm:w-24 rounded-lg overflow-hidden bg-slate-800 shrink-0 relative">
-                  <img
-                    src={mediaUrl}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = PRESET_MEDIA[0].url;
-                    }}
-                  />
+                  {mediaUrl.trim() ? (
+                    <img
+                      key={mediaUrl}
+                      src={mediaUrl.trim()}
+                      alt="Advertisement creative preview"
+                      className="w-full h-full object-cover"
+                      onLoad={() => setImagePreviewError(null)}
+                      onError={() => setImagePreviewError('This image could not be loaded. Use a direct, publicly accessible JPG, PNG, or WEBP image URL—not a webpage or private file link.')}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">Image URL required</div>
+                  )}
                   <div className="absolute top-1 left-1 bg-slate-950/80 px-1 py-0.5 rounded text-[8px] font-mono text-white">
                     60s
                   </div>
