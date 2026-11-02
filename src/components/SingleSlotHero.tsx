@@ -111,7 +111,7 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
               </span>
             </div>
             <div className="font-mono text-[10px] sm:text-xs text-slate-400">
-              {currentLiveSchedule?.scheduleCode || 'SLOT-001'}
+              {currentLiveSchedule?.slotNumber ? `GLOBAL SLOT ${String(currentLiveSchedule.slotNumber).padStart(3, '0')}` : (currentLiveSchedule?.scheduleCode || 'GLOBAL SLOT 001')}
             </div>
           </div>
 
@@ -132,7 +132,7 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
                     <Radio className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-rose-500 animate-pulse shrink-0" />
                     <div className="text-left">
                       <span className="text-[8px] sm:text-[10px] text-rose-400 uppercase font-black tracking-wider block leading-none">
-                        60s Live Countdown
+                        Ad slot countdown · 60 seconds
                       </span>
                       <span className="text-base sm:text-2xl font-black text-rose-400 leading-tight">
                         00:{String(liveRemainingSeconds).padStart(2, '0')}
@@ -188,7 +188,7 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] sm:text-xs uppercase font-extrabold tracking-wider text-slate-500">
-                  Single Available Slot
+                  Hourly Auction · 60 Slots
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
@@ -196,14 +196,12 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
                 </span>
               </div>
               <h2 className="text-lg sm:text-2xl font-black text-slate-950 tracking-tight mt-0.5">
-                NEXT HOMEPAGE SLOT AUCTION
+                NEXT HOURLY AUCTION
               </h2>
             </div>
             <div className="flex flex-col sm:items-end text-[10px] sm:text-xs font-mono text-slate-500">
               <span className="font-semibold text-slate-700">
-                {nextSlotAuction?.id.startsWith('auc_slot_')
-                  ? `AUCTION-SLOT-${nextSlotAuction.id.slice(-4)}`
-                  : 'AUCTION-SLOT-002'}
+                {`AUCTION ${String(nextSlotAuction?.auctionHour || 1).padStart(2, '0')} · SLOTS ${String(((nextSlotAuction?.auctionHour || 1) - 1) * 60 + 1).padStart(3, '0')}–${String((nextSlotAuction?.auctionHour || 1) * 60).padStart(3, '0')}`}
               </span>
               <span>When this auction closes, the next auction starts automatically</span>
             </div>
@@ -245,7 +243,7 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
                 {formatAuctionCountdown(auctionRemainingSeconds)}
               </div>
               <span className="text-[9px] sm:text-[11px] text-slate-400 mt-0.5 block">
-                Auction timer (1 hour)
+                60-minute auction countdown
               </span>
             </div>
 
