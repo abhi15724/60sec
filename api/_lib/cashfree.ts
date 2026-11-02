@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 export const apiVersion = '2023-08-01';
 
@@ -90,5 +90,7 @@ export function verifyCashfreeWebhook(req: VercelRequest, raw: Buffer) {
 }
 
 export function makeOrderId(auctionId: string) {
-  return `60s_${auctionId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 28)}_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+  // Stable per auction: retries and concurrent requests must address one provider order.
+  const digest = createHash('sha256').update(auctionId).digest('hex').slice(0, 24);
+  return `60s_${digest}`;
 }
