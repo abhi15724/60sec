@@ -39,6 +39,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       orderId: existing.provider_order_id, paymentSessionId: existing.payment_session_id, status: existing.status,
     });
 
+    const customerPhone = String(user.phone || user.user_metadata?.phone || '').replace(/\\D/g, '');
+    if (!/^\\d{10,12}$/.test(customerPhone)) {
+      return json(res, 400, { error: 'VERIFIED_CUSTOMER_PHONE_REQUIRED' });
+    }
     const orderId = makeOrderId(auctionId);
     const amount = Number(auction.current_bid);
     const origin = process.env.APP_URL || `https://${req.headers.host}`;
@@ -52,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         customer_details: {
           customer_id: user.id,
           customer_email: user.email || 'customer@60sec.market',
-          customer_phone: '9999999999'
+          customer_phone: customerPhone
         },
         order_meta: {
           return_url: `${origin}/?cashfree_order_id={order_id}`,
