@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext.tsx';
 import { calculateMinimumNextBid } from '../core/auction.ts';
+import { getCurrencySymbol, getPreferredCurrency } from '../core/currency.ts';
 import { anonymizeUserId } from '../core/realtime.ts';
 import { X, Clock, Users, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
@@ -31,6 +32,8 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
   const [selectedAdId, setSelectedAdId] = useState<string>('');
   const [step, setStep] = useState<'input' | 'confirm' | 'success'>('input');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const currencySymbol = getCurrencySymbol(nextSlotAuction?.currency || getPreferredCurrency());
 
   // User's advertisements
   const userAds = ads.filter((a) => a.userId === currentUser.id);
@@ -87,7 +90,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
   const handlePlaceBidSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (bidAmount < minNextBid) {
-      setErrorMsg(`Your bid must be at least $${minNextBid}`);
+      setErrorMsg(`Your bid must be at least ${currencySymbol}{minNextBid}`);
       return;
     }
     setErrorMsg(null);
@@ -205,10 +208,10 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                   Minimum Next Bid
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-emerald-400 mt-0.5 block">
-                  ${minNextBid}
+                  {currencySymbol}{minNextBid}
                 </span>
                 <span className="text-[10px] text-slate-400">
-                  Strictly &ge; ${minNextBid}
+                  Strictly &ge; {currencySymbol}{minNextBid}
                 </span>
               </div>
             </div>
@@ -234,7 +237,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                   />
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs text-slate-500 mt-1.5">
-                  <span>Minimum acceptable: ${minNextBid}</span>
+                  <span>Minimum acceptable: {currencySymbol}{minNextBid}</span>
                   <div className="flex gap-1.5">
                     {[minNextBid, minNextBid + 10, minNextBid + 50].map((quick) => (
                       <button
@@ -363,7 +366,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Your Bid</span>
-                <span className="text-lg sm:text-xl font-black text-slate-950">${bidAmount}</span>
+                <span className="text-lg sm:text-xl font-black text-slate-950">{currencySymbol}{bidAmount}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Slot Duration</span>
@@ -418,7 +421,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
             <div className="p-3.5 sm:p-4 rounded-xl bg-slate-950 text-white text-left grid grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <span className="text-[10px] sm:text-[11px] text-slate-400 block uppercase">Your Bid</span>
-                <span className="text-xl sm:text-2xl font-black text-emerald-400">${bidAmount}</span>
+                <span className="text-xl sm:text-2xl font-black text-emerald-400">{currencySymbol}{bidAmount}</span>
               </div>
               <div className="text-right">
                 <span className="text-[10px] sm:text-[11px] text-slate-400 block uppercase">Auction Closes In</span>
