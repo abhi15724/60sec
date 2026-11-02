@@ -145,7 +145,7 @@ export const SingleSlotPaymentModal: React.FC<SingleSlotPaymentModalProps> = ({
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Winning Bid</span>
-                <span className="font-mono font-bold text-slate-900">${winningAmount}</span>
+                <span className="font-mono font-bold text-slate-900">{currencySymbol}{winningAmount}</span>
               </div>
               <div className="flex justify-between py-1 items-center border-b border-slate-200/60">
                 <span className="text-slate-700 font-bold">Payment Status</span>
@@ -155,7 +155,7 @@ export const SingleSlotPaymentModal: React.FC<SingleSlotPaymentModalProps> = ({
               </div>
               <div className="flex justify-between py-1 items-center pt-1.5">
                 <span className="text-slate-900 font-extrabold">Amount Due</span>
-                <span className="text-xl sm:text-2xl font-black text-slate-950">${winningAmount}</span>
+                <span className="text-xl sm:text-2xl font-black text-slate-950">{currencySymbol}{winningAmount}</span>
               </div>
             </div>
 
@@ -188,7 +188,7 @@ export const SingleSlotPaymentModal: React.FC<SingleSlotPaymentModalProps> = ({
                 ) : (
                   <>
                     <CreditCard className="h-4 w-4" />
-                    <span>PAY NOW (${winningAmount})</span>
+                    <span>PAY NOW ({currencySymbol}{winningAmount})</span>
                   </>
                 )}
               </button>
