@@ -40,6 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const customerPhone = String(user.phone || user.user_metadata?.phone || '').replace(/\\D/g, '');
+    const customerEmail = user.email;
+    if (!customerEmail) return json(res, 400, { error: 'VERIFIED_CUSTOMER_EMAIL_REQUIRED' });
     if (!/^\\d{10,12}$/.test(customerPhone)) {
       return json(res, 400, { error: 'VERIFIED_CUSTOMER_PHONE_REQUIRED' });
     }
@@ -55,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         order_currency: auction.currency,
         customer_details: {
           customer_id: user.id,
-          customer_email: user.email || 'customer@60sec.market',
+          customer_email: customerEmail,
           customer_phone: customerPhone
         },
         order_meta: {
