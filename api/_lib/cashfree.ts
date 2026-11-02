@@ -35,16 +35,27 @@ export async function requireUser(req: VercelRequest) {
   return error ? null : data.user;
 }
 
+/**
+ * Production payments require an explicit kill-switch opt-in in Vercel.
+ * Keep CASHFREE_ENVIRONMENT=sandbox for Preview and set production only
+ * after production credentials and the live webhook have been configured.
+ */
 export function cashfreeBaseUrl() {
   const environment = process.env.CASHFREE_ENVIRONMENT || 'sandbox';
-  if (environment !== 'sandbox') throw new Error('Only Cashfree Sandbox is enabled by this integration');
-  return 'https://sandbox.cashfree.com/pg';
+  if (environment === 'sandbox') return 'https://sandbox.cashfree.com/pg';
+  if (environment === 'production') {
+    if (process.env.PAYMENTS_LIVE_ENABLED !== 'true') {
+      throw new Error('Live Cashfree payments are disabled; set PAYMENTS_LIVE_ENABLED=true only after production readiness checks');
+    }
+    return 'https://api.cashfree.com/pg';
+  }
+  throw new Error('CASHFREE_ENVIRONMENT must be sandbox or production');
 }
 
 export async function cashfreeRequest(path: string, init: RequestInit = {}) {
   const clientId = process.env.CASHFREE_CLIENT_ID;
   const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error('Cashfree Sandbox credentials are not configured');
+  if (!clientId || !clientSecret) throw new Error('Cashfree credentials are not configured');
   const response = await fetch(`${cashfreeBaseUrl()}${path}`, {
     ...init,
     headers: {
