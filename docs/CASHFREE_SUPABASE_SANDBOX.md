@@ -28,11 +28,13 @@ Do not add any of these as `VITE_*` variables. Do not commit secrets.
 
 1. Apply `supabase/migrations/202611020001_cashfree_payments.sql` to the Supabase project.
 2. Configure Supabase Auth and create real advertiser accounts.
-3. Seed approved advertiser rows, active auctions, and accepted bids through a trusted admin process. Do not seed real auctions from browser localStorage.
-4. Set the matching Vercel Preview variables and redeploy the Preview deployment.
+3. Require advertisers to have a verified 10–12 digit phone number in Supabase Auth metadata/phone before starting Cashfree Checkout.
+4. Seed approved advertiser rows, active auctions, and accepted bids through a trusted admin process. Do not seed real auctions from browser localStorage.
+5. Set the matching Vercel Preview variables and redeploy the Preview deployment.
 
 ## API
 
+- `POST /api/auctions/place-bid` — Authorization: Bearer Supabase access token; body: `{ "auctionId": "...", "advertisementId": "...", "amount": 123 }`. A database transaction locks the auction, validates the active window and approved advertiser-owned ad, checks the minimum increment, and records the bid.
 - `POST /api/payments/create-order` — Authorization: Bearer Supabase access token; body: `{ "auctionId": "..." }`. Returns order ID and Cashfree payment session ID.
 - `POST /api/payments/verify` — Authorization: Bearer Supabase access token; body: `{ "orderId": "..." }`. Fetches order/payment status from Cashfree and confirms through the atomic database function.
 - `POST /api/payments/webhook` — Cashfree webhook endpoint. Configure it in Cashfree Sandbox. It requires Vercel to expose the exact raw body as `req.rawBody`; if the deployment runtime does not provide it, configure a raw-body middleware before enabling the webhook.
