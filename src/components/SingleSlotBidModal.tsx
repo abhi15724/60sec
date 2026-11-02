@@ -325,7 +325,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                     className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded bg-slate-50 border border-slate-100"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900">${b.amount}</span>
+                      <span className="font-bold text-slate-900">{currencySymbol}{b.amount}</span>
                       <span className="text-slate-500 text-[11px] font-mono">
                         {anonymizeUserId(b.userId)}
                       </span>
