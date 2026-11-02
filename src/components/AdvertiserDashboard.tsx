@@ -104,7 +104,7 @@ export const AdvertiserDashboard: React.FC<AdvertiserDashboardProps> = ({
                   You won the next 60-second homepage slot!
                 </h3>
                 <p className="text-xs text-amber-900 mt-0.5">
-                  Winning bid: <strong>${awaitingPaymentAuction?.currentBid}</strong>. Complete payment to secure your exact broadcast window.
+                  Winning bid: <strong>{currencySymbol}{awaitingPaymentAuction?.currentBid}</strong>. Complete payment to secure your exact broadcast window.
                 </p>
               </div>
             </div>
@@ -113,7 +113,7 @@ export const AdvertiserDashboard: React.FC<AdvertiserDashboardProps> = ({
               onClick={onOpenPaymentModal}
               className="w-full sm:w-auto px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider transition shadow-sm cursor-pointer shrink-0"
             >
-              PAY NOW (${awaitingPaymentAuction?.currentBid})
+              PAY NOW ({currencySymbol}{awaitingPaymentAuction?.currentBid})
             </button>
           </div>
         )}
@@ -172,9 +172,9 @@ export const AdvertiserDashboard: React.FC<AdvertiserDashboardProps> = ({
                             {ad?.title || '60-Second Broadcast'}
                           </h4>
                           <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-500 mt-1">
-                            <span>Your Bid: <strong className="text-slate-900">${bid.amount}</strong></span>
+                            <span>Your Bid: <strong className="text-slate-900">{currencySymbol}{bid.amount}</strong></span>
                             <span>·</span>
-                            <span>Current Lead: <strong className="text-slate-900">${auction?.currentBid}</strong></span>
+                            <span>Current Lead: <strong className="text-slate-900">{currencySymbol}{auction?.currentBid}</strong></span>
                           </div>
                         </div>
                       </div>
