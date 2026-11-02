@@ -65,12 +65,11 @@ export async function cashfreeRequest(path: string, init: RequestInit = {}) {
   return payload as Record<string, any>;
 }
 
-export function verifyCashfreeWebhook(req: VercelRequest) {
+export function verifyCashfreeWebhook(req: VercelRequest, raw: Buffer) {
   const signature = req.headers['x-webhook-signature'];
   const timestamp = req.headers['x-webhook-timestamp'];
   if (typeof signature !== 'string' || typeof timestamp !== 'string') return false;
-  const raw = (req as VercelRequest & { rawBody?: Buffer }).rawBody;
-  if (!raw || !Buffer.isBuffer(raw)) return false;
+  if (!Buffer.isBuffer(raw)) return false;
   const expected = createHmac('sha256', process.env.CASHFREE_CLIENT_SECRET || '')
     .update(timestamp + raw.toString('utf8'))
     .digest('base64');
