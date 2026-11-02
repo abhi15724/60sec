@@ -6,9 +6,11 @@ export const config = { api: { bodyParser: false } };
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return json(res, 405, { error: 'METHOD_NOT_ALLOWED' });
   try {
-    if (!verifyCashfreeWebhook(req)) return json(res, 401, { error: 'INVALID_WEBHOOK_SIGNATURE' });
-    const raw = (req as VercelRequest & { rawBody?: Buffer }).rawBody;
-    const payload = JSON.parse(raw!.toString('utf8'));
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const raw = Buffer.concat(chunks);
+    if (!verifyCashfreeWebhook(req, raw)) return json(res, 401, { error: 'INVALID_WEBHOOK_SIGNATURE' });
+    const payload = JSON.parse(raw.toString('utf8'));
     const type = payload?.type;
     const orderId = payload?.data?.order?.order_id;
     const payment = payload?.data?.payment;
