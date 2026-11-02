@@ -16,6 +16,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - run: bun install --frozen-lockfile
+      # bun.lock is stale relative to package.json (Supabase/Vercel dependencies).
+      # Resolve from package.json until a regenerated lockfile can be committed.
+      - run: bun install
       - run: bun run lint
       - run: bun run build

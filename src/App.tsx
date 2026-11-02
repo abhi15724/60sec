@@ -17,6 +17,7 @@ import { OutbidNotificationToast } from './components/OutbidNotificationToast.ts
 import { AdvertiserDashboard } from './components/AdvertiserDashboard.tsx';
 import { AdminPortal } from './components/AdminPortal.tsx';
 import { TodaysBidLeaderboard } from './components/TodaysBidLeaderboard.tsx';
+import { ProductionMarketplace } from './ProductionMarketplace.tsx';
 
 function SingleSlotApp() {
   const [currentView, setCurrentView] = useState<'homepage' | 'dashboard' | 'admin'>('homepage');
@@ -137,6 +138,14 @@ function SingleSlotApp() {
 }
 
 export default function App() {
+  const [productionConfigured, setProductionConfigured] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch('/api/public-config').then((response) => response.json()).then((config) => {
+      setProductionConfigured(Boolean(config.configured));
+    }).catch(() => setProductionConfigured(false));
+  }, []);
+  if (productionConfigured === null) return <main className="min-h-screen grid place-items-center text-slate-600">Loading 60SEC…</main>;
+  if (productionConfigured) return <ProductionMarketplace />;
   return (
     <MarketplaceProvider>
       <SingleSlotApp />
