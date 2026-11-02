@@ -6,12 +6,30 @@ import type { VercelRequest } from '@vercel/node';
 afterEach(() => {
   delete process.env.CASHFREE_ENVIRONMENT;
   delete process.env.CASHFREE_CLIENT_SECRET;
+  delete process.env.PAYMENTS_LIVE_ENABLED;
 });
 
-describe('Cashfree sandbox safeguards', () => {
-  it('refuses non-sandbox environment', () => {
+describe('Cashfree environment safeguards', () => {
+  it('defaults to Sandbox', () => {
+    delete process.env.CASHFREE_ENVIRONMENT;
+    expect(cashfreeBaseUrl()).toBe('https://sandbox.cashfree.com/pg');
+  });
+
+  it('requires an explicit live-payment kill-switch opt-in', () => {
     process.env.CASHFREE_ENVIRONMENT = 'production';
-    expect(() => cashfreeBaseUrl()).toThrow('Only Cashfree Sandbox is enabled');
+    delete process.env.PAYMENTS_LIVE_ENABLED;
+    expect(() => cashfreeBaseUrl()).toThrow('Live Cashfree payments are disabled');
+  });
+
+  it('uses production endpoint only after explicit opt-in', () => {
+    process.env.CASHFREE_ENVIRONMENT = 'production';
+    process.env.PAYMENTS_LIVE_ENABLED = 'true';
+    expect(cashfreeBaseUrl()).toBe('https://api.cashfree.com/pg');
+  });
+
+  it('rejects unknown environments', () => {
+    process.env.CASHFREE_ENVIRONMENT = 'prod';
+    expect(() => cashfreeBaseUrl()).toThrow('must be sandbox or production');
   });
 
   it('creates provider-safe unique order identifiers', () => {
