@@ -80,13 +80,13 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
                 <div className="text-xs sm:text-sm font-bold text-emerald-950">
                   {auctionTransitionNotice.winnerName ? (
                     <span>
-                      Previous auction closed · Won by <strong>{auctionTransitionNotice.winnerName}</strong> for <strong>${auctionTransitionNotice.winningBid}</strong>.
+                      Previous auction closed · Won by <strong>{auctionTransitionNotice.winnerName}</strong> for <strong>{currencySymbol}{auctionTransitionNotice.winningBid}</strong>.
                     </span>
                   ) : (
                     <span>Previous auction closed with no bids.</span>
                   )}
                   <span className="text-emerald-800 font-extrabold ml-1.5 block sm:inline">
-                    Next 60s Slot Auction started from ${auctionTransitionNotice.nextStartingBid}!
+                    Next 60s Slot Auction started from {currencySymbol}{auctionTransitionNotice.nextStartingBid}!
                   </span>
                 </div>
               </div>
@@ -220,8 +220,8 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
               </div>
               <span className="text-[9px] sm:text-[11px] text-slate-500 mt-0.5 block">
                 {nextSlotAuction?.currentBid
-                  ? `Base: {currencySymbol}{nextSlotAuction.startingBid}`
-                  : `Starts from prev end ({currencySymbol}{nextSlotAuction?.startingBid || 1})`}
+                  ? `Base: ${currencySymbol}${nextSlotAuction.startingBid}`
+                  : `Starts from prev end (${currencySymbol}${nextSlotAuction?.startingBid || 1})`}
               </span>
             </div>
 
