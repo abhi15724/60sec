@@ -39,7 +39,7 @@ export class AuctionError extends Error {
  */
 export function calculateMinimumNextBid(currentBid: number | null, startingBid: number = 1.0): number {
   if (startingBid < 1.0) {
-    throw new AuctionError('INVALID_STARTING_BID', 'Starting bid cannot be lower than the currency's 1-unit minimum');
+    throw new AuctionError('INVALID_STARTING_BID', "Starting bid cannot be lower than the currency's 1-unit minimum");
   }
   if (currentBid === null || currentBid === 0) {
     return startingBid;
