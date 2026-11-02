@@ -92,10 +92,6 @@ function SingleSlotApp() {
           }, 50);
         }}
         onOpenCreateAd={() => setActiveModal('create_ad')}
-        onOpenAdmin={() => {
-          switchUser('admin');
-          setCurrentView('admin');
-        }}
       />
 
       {/* Exclusively render at most ONE modal at any given time to prevent stacking & uncloseable overlaps */}

@@ -199,7 +199,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return {
       id: `auc_slot_${nextStart.getTime()}`,
       advertisementId: paidAuctionAds[0]?.id,
-      operatingDay,
+      operatingDay: operatingDay ?? undefined,
       auctionHour: getAuctionHourForSlot(slotNumber),
       slotNumber,
       currency: previousAuction?.currency || getPreferredCurrency(),
