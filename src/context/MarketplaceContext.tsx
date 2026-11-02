@@ -99,22 +99,69 @@ export interface AuctionTransitionNotice {
   timestamp: Date;
 }
 
+const MARKETPLACE_STORAGE_KEY = '60sec.marketplace.v1';
+
+interface PersistedMarketplaceState {
+  currentUser: User;
+  ads: Advertisement[];
+  auctions: Auction[];
+  bids: Bid[];
+  schedules: AdSchedule[];
+  payments: PaymentRecord[];
+  events: AdEvent[];
+}
+
+function loadMarketplaceState(): Partial<PersistedMarketplaceState> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(MARKETPLACE_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw, (key, value) => {
+      if (typeof value === 'string' && ['createdAt', 'updatedAt', 'startTime', 'endTime', 'paidAt', 'timestamp'].includes(key)) {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? value : date;
+      }
+      return value;
+    });
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 const MarketplaceContext = createContext<MarketplaceContextType | null>(null);
 
 export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User>(DEMO_USERS[0]); // Sarah Chen (advertiser)
-  const [ads, setAds] = useState<Advertisement[]>(INITIAL_ADS);
-  const [auctions, setAuctions] = useState<Auction[]>(INITIAL_AUCTIONS);
-  const [bids, setBids] = useState<Bid[]>(INITIAL_BIDS);
-  const [schedules, setSchedules] = useState<AdSchedule[]>(INITIAL_SCHEDULES);
-  const [payments, setPayments] = useState<PaymentRecord[]>(INITIAL_PAYMENTS);
-  const [events, setEvents] = useState<AdEvent[]>(INITIAL_EVENTS);
+  // Restore the saved snapshot before first render so a reload does not reset auctions.
+  const [savedState] = useState<Partial<PersistedMarketplaceState>>(loadMarketplaceState);
+  const [currentUser, setCurrentUser] = useState<User>(() => savedState.currentUser || DEMO_USERS[0]);
+  const [ads, setAds] = useState<Advertisement[]>(() => savedState.ads || INITIAL_ADS);
+  const [auctions, setAuctions] = useState<Auction[]>(() => savedState.auctions || INITIAL_AUCTIONS);
+  const [bids, setBids] = useState<Bid[]>(() => savedState.bids || INITIAL_BIDS);
+  const [schedules, setSchedules] = useState<AdSchedule[]>(() => savedState.schedules || INITIAL_SCHEDULES);
+  const [payments, setPayments] = useState<PaymentRecord[]>(() => savedState.payments || INITIAL_PAYMENTS);
+  const [events, setEvents] = useState<AdEvent[]>(() => savedState.events || INITIAL_EVENTS);
   const [activeOutbidNotice, setActiveOutbidNotice] = useState<OutbidNotification | null>(null);
   const [auctionTransitionNotice, setAuctionTransitionNotice] = useState<AuctionTransitionNotice | null>(null);
 
-  const [currentLiveSchedule, setCurrentLiveSchedule] = useState<AdSchedule | null>(INITIAL_SCHEDULES[0]);
-  const [liveRemainingSeconds, setLiveRemainingSeconds] = useState<number>(60);
-  const [auctionRemainingSeconds, setAuctionRemainingSeconds] = useState<number>(3600);
+  const [currentLiveSchedule, setCurrentLiveSchedule] = useState<AdSchedule | null>(() => (savedState.schedules || INITIAL_SCHEDULES).find((schedule) => schedule.status === 'LIVE') || null);
+  const [liveRemainingSeconds, setLiveRemainingSeconds] = useState<number>(() => {
+    const live = (savedState.schedules || INITIAL_SCHEDULES).find((schedule) => schedule.status === 'LIVE');
+    return live ? Math.max(0, Math.ceil((live.endTime.getTime() - Date.now()) / 1000)) : 0;
+  });
+  const [auctionRemainingSeconds, setAuctionRemainingSeconds] = useState<number>(() => {
+    const active = (savedState.auctions || INITIAL_AUCTIONS).find((auction) => auction.status === 'ACTIVE');
+    return active ? Math.max(0, Math.ceil((active.endTime.getTime() - Date.now()) / 1000)) : 0;
+  });
+
+  // Persist changes across reloads in this browser. Production cross-device state needs a backend database.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MARKETPLACE_STORAGE_KEY, JSON.stringify({ currentUser, ads, auctions, bids, schedules, payments, events }));
+    } catch {
+      // Storage may be disabled or full; keep the current session usable.
+    }
+  }, [currentUser, ads, auctions, bids, schedules, payments, events]);
 
   // Switch between advertiser and admin personas
   const switchUser = (role: 'advertiser' | 'admin') => {
