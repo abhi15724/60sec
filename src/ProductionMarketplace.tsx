@@ -87,7 +87,7 @@ export function ProductionMarketplace() {
   };
 
   const sendPhoneCode = async () => {
-    if (!client || !/^\\+[1-9]\\d{7,14}$/.test(phone.trim())) return setError('Enter a phone number in international format, for example +919876543210.');
+    if (!client || !/^\+[1-9]\d{7,14}$/.test(phone.trim())) return setError('Enter a phone number in international format, for example +919876543210.');
     setBusy('phone'); setError('');
     const {error: phoneError} = await client.auth.updateUser({phone:phone.trim()});
     setBusy('');
