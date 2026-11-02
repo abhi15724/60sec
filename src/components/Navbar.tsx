@@ -74,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onO
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-700">
                 <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping shrink-0"></span>
                 <span className="font-bold text-[11px] sm:text-xs">
-                  {currentLiveSchedule.scheduleCode.replace('-', ' ')} LIVE
+                  {currentLiveSchedule.slotNumber ? `GLOBAL SLOT ${String(currentLiveSchedule.slotNumber).padStart(3, '0')}` : currentLiveSchedule.scheduleCode.replace('-', ' ')} LIVE
                 </span>
                 <span className="font-mono font-bold text-rose-950 px-1 py-0.5 rounded bg-rose-100/80">
                   {liveRemainingSeconds}s
@@ -96,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView, onO
             {currentLiveSchedule && (
               <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 border border-rose-200 text-rose-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping shrink-0"></span>
-                <span>{liveRemainingSeconds}s</span>
+                <span>{currentLiveSchedule.slotNumber ? `SLOT ${String(currentLiveSchedule.slotNumber).padStart(3, '0')} · ` : ''}{liveRemainingSeconds}s</span>
               </div>
             )}
 
