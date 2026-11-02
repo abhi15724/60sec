@@ -16,6 +16,7 @@ import { SingleSlotPaymentModal } from './components/SingleSlotPaymentModal.tsx'
 import { OutbidNotificationToast } from './components/OutbidNotificationToast.tsx';
 import { AdvertiserDashboard } from './components/AdvertiserDashboard.tsx';
 import { AdminPortal } from './components/AdminPortal.tsx';
+import { TodaysBidLeaderboard } from './components/TodaysBidLeaderboard.tsx';
 
 function SingleSlotApp() {
   const [currentView, setCurrentView] = useState<'homepage' | 'dashboard' | 'admin'>('homepage');
@@ -65,6 +66,9 @@ function SingleSlotApp() {
           <SingleSlotHero
             onBidNowClick={() => setActiveModal('bid')}
           />
+
+          {/* Daily highest-bid rankings and today's auction winners */}
+          <TodaysBidLeaderboard />
 
           {/* How It Works (6 Steps) */}
           <HowItWorksSection />
