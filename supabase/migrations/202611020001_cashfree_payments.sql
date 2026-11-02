@@ -162,3 +162,39 @@ $$;
 
 revoke all on function public.confirm_cashfree_payment(text,text,text) from public, anon, authenticated;
 grant execute on function public.confirm_cashfree_payment(text,text,text) to service_role;
+
+-- Bid placement is also server-authoritative. Clients cannot update auction totals directly.
+create or replace function public.place_auction_bid(
+  p_auction_id text,
+  p_bidder_id uuid,
+  p_advertisement_id uuid,
+  p_amount numeric
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_auction public.auctions%rowtype;
+  v_ad public.advertisements%rowtype;
+  v_minimum numeric(14,2);
+begin
+  select * into v_auction from public.auctions where id=p_auction_id for update;
+  if not found or v_auction.status <> 'ACTIVE' or v_auction.ends_at <= now() then
+    raise exception 'AUCTION_NOT_ACTIVE';
+  end if;
+  select * into v_ad from public.advertisements where id=p_advertisement_id for update;
+  if not found or v_ad.owner_id <> p_bidder_id or v_ad.approval_status <> 'APPROVED'
+     or v_ad.ad_status <> 'ACTIVE' or v_ad.is_house_ad then
+    raise exception 'ADVERTISEMENT_NOT_ELIGIBLE';
+  end if;
+  v_minimum := coalesce(v_auction.current_bid, v_auction.starting_bid - 1) + 1;
+  if p_amount < v_minimum then raise exception 'BID_TOO_LOW'; end if;
+  insert into public.bids(auction_id,bidder_id,amount) values (p_auction_id,p_bidder_id,p_amount);
+  update public.auctions set current_bid=p_amount,current_bidder_id=p_bidder_id,
+    advertisement_id=p_advertisement_id where id=p_auction_id;
+  return jsonb_build_object('status','ACCEPTED','minimum_next_bid',p_amount + 1);
+end;
+$$;
+revoke all on function public.place_auction_bid(text,uuid,uuid,numeric) from public, anon, authenticated;
+grant execute on function public.place_auction_bid(text,uuid,uuid,numeric) to service_role;
