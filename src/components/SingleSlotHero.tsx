@@ -257,7 +257,7 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
                 {currencySymbol}{minNextBid}
               </div>
               <span className="text-[9px] sm:text-[11px] text-slate-400 mt-0.5 block">
-                {nextSlotAuction?.currentBid ? '+$1 min increment' : 'Initial bid meets base'}
+                {nextSlotAuction?.currentBid ? `+${currencySymbol}1 min increment` : 'Initial bid meets base'}
               </span>
             </div>
           </div>
