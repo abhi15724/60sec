@@ -4,6 +4,7 @@
  */
 
 import { Auction, Bid, OutbidNotification } from './types.ts';
+import { getCurrencySymbol } from './currency.ts';
 import { getOperatingDayKey as getISTOperatingDayKey } from './scheduling.ts';
 
 export const AUCTION_HOURS_PER_OPERATING_DAY = 12;
@@ -38,7 +39,7 @@ export class AuctionError extends Error {
  */
 export function calculateMinimumNextBid(currentBid: number | null, startingBid: number = 1.0): number {
   if (startingBid < 1.0) {
-    throw new AuctionError('INVALID_STARTING_BID', 'Starting bid cannot be lower than $1');
+    throw new AuctionError('INVALID_STARTING_BID', 'Starting bid cannot be lower than the currency's 1-unit minimum');
   }
   if (currentBid === null || currentBid === 0) {
     return startingBid;
@@ -101,18 +102,19 @@ export function validateAndApplyBid(
   }
 
   const minNextBid = calculateMinimumNextBid(currentAuction.currentBid, currentAuction.startingBid);
+  const symbol = getCurrencySymbol(currentAuction.currency);
 
   // AUCTION-002 & AUCTION-003: Bid must be >= minimumNextBid
   if (bidRequest.amount < minNextBid) {
     if (currentAuction.currentBid !== null && bidRequest.amount <= currentAuction.currentBid) {
       throw new AuctionError(
         'BID_TOO_LOW',
-        `Bid $${bidRequest.amount} must be greater than current bid $${currentAuction.currentBid}. Minimum next bid is $${minNextBid}.`
+        `Bid ${symbol}${bidRequest.amount} must be greater than current bid ${symbol}${currentAuction.currentBid}. Minimum next bid is ${symbol}${minNextBid}.`
       );
     }
     throw new AuctionError(
       'BID_BELOW_MINIMUM',
-      `Bid $${bidRequest.amount} is below required minimum next bid of $${minNextBid}.`
+      `Bid ${symbol}${bidRequest.amount} is below required minimum next bid of ${symbol}${minNextBid}.`
     );
   }
 

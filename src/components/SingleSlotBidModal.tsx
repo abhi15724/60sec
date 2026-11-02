@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext.tsx';
 import { calculateMinimumNextBid } from '../core/auction.ts';
+import { getCurrencySymbol, getPreferredCurrency } from '../core/currency.ts';
 import { anonymizeUserId } from '../core/realtime.ts';
 import { X, Clock, Users, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
@@ -31,6 +32,8 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
   const [selectedAdId, setSelectedAdId] = useState<string>('');
   const [step, setStep] = useState<'input' | 'confirm' | 'success'>('input');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const currencySymbol = getCurrencySymbol(nextSlotAuction?.currency || getPreferredCurrency());
 
   // User's advertisements
   const userAds = ads.filter((a) => a.userId === currentUser.id);
@@ -87,7 +90,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
   const handlePlaceBidSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (bidAmount < minNextBid) {
-      setErrorMsg(`Your bid must be at least $${minNextBid}`);
+      setErrorMsg(`Your bid must be at least ${currencySymbol}${minNextBid}`);
       return;
     }
     setErrorMsg(null);
@@ -191,12 +194,12 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                   {nextSlotAuction.currentBid ? 'Current Highest Bid' : 'Starting Price'}
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-amber-400 mt-0.5 block">
-                  ${currentBid}
+                  {currencySymbol}{currentBid}
                 </span>
                 <span className="text-[10px] text-slate-400">
                   {nextSlotAuction.currentBid
-                    ? `Base: $${nextSlotAuction.startingBid}`
-                    : `Starts from prev end ($${nextSlotAuction.startingBid})`}
+                    ? `Base: ${currencySymbol}${nextSlotAuction.startingBid}`
+                    : `Starts from prev end (${currencySymbol}${nextSlotAuction.startingBid})`}
                 </span>
               </div>
 
@@ -205,10 +208,10 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                   Minimum Next Bid
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-emerald-400 mt-0.5 block">
-                  ${minNextBid}
+                  {currencySymbol}{minNextBid}
                 </span>
                 <span className="text-[10px] text-slate-400">
-                  Strictly &ge; ${minNextBid}
+                  Strictly &ge; {currencySymbol}{minNextBid}
                 </span>
               </div>
             </div>
@@ -217,11 +220,11 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
             <form onSubmit={handlePlaceBidSubmit} className="space-y-4 text-left">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Your Bid ($ USD)
+                  Your Bid ({currencySymbol})
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-400">
-                    $
+                    {currencySymbol}
                   </span>
                   <input
                     type="number"
@@ -234,7 +237,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                   />
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs text-slate-500 mt-1.5">
-                  <span>Minimum acceptable: ${minNextBid}</span>
+                  <span>Minimum acceptable: {currencySymbol}{minNextBid}</span>
                   <div className="flex gap-1.5">
                     {[minNextBid, minNextBid + 10, minNextBid + 50].map((quick) => (
                       <button
@@ -243,7 +246,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                         onClick={() => setBidAmount(quick)}
                         className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[11px] cursor-pointer touch-manipulation"
                       >
-                        +${quick - minNextBid}
+                        +{currencySymbol}{quick - minNextBid}
                       </button>
                     ))}
                   </div>
@@ -322,7 +325,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                     className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded bg-slate-50 border border-slate-100"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900">${b.amount}</span>
+                      <span className="font-bold text-slate-900">{currencySymbol}{b.amount}</span>
                       <span className="text-slate-500 text-[11px] font-mono">
                         {anonymizeUserId(b.userId)}
                       </span>
@@ -359,11 +362,11 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Current Highest</span>
-                <span className="font-mono text-slate-700">${currentBid}</span>
+                <span className="font-mono text-slate-700">{currencySymbol}{currentBid}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Your Bid</span>
-                <span className="text-lg sm:text-xl font-black text-slate-950">${bidAmount}</span>
+                <span className="text-lg sm:text-xl font-black text-slate-950">{currencySymbol}{bidAmount}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Slot Duration</span>
@@ -418,7 +421,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
             <div className="p-3.5 sm:p-4 rounded-xl bg-slate-950 text-white text-left grid grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <span className="text-[10px] sm:text-[11px] text-slate-400 block uppercase">Your Bid</span>
-                <span className="text-xl sm:text-2xl font-black text-emerald-400">${bidAmount}</span>
+                <span className="text-xl sm:text-2xl font-black text-emerald-400">{currencySymbol}{bidAmount}</span>
               </div>
               <div className="text-right">
                 <span className="text-[10px] sm:text-[11px] text-slate-400 block uppercase">Auction Closes In</span>
