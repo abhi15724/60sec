@@ -16,6 +16,7 @@ export interface User {
 export type AdApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type AdStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
 export type AdvertisementType = 'COMMERCIAL' | 'HOUSE';
+export type MarketCurrency = 'INR' | 'USD';
 
 export interface Advertisement {
   id: string;
@@ -44,6 +45,7 @@ export type AuctionStatus =
 export interface Auction {
   id: string;
   advertisementId?: string;
+  currency?: MarketCurrency;
   startingBid: number;
   currentBid: number | null;
   currentBidderId: string | null;
