@@ -45,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!/^\d{10,12}$/.test(customerPhone)) {
       return json(res, 400, { error: 'VERIFIED_CUSTOMER_PHONE_REQUIRED' });
     }
-    const orderId = makeOrderId(auctionId);
+    const orderId = existing?.provider_order_id || makeOrderId(auctionId);
     const amount = Number(auction.current_bid);
     const origin = process.env.APP_URL || `https://${req.headers.host}`;
     const order = await cashfreeRequest('/orders', {
@@ -67,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         order_note: `60SEC auction ${auctionId}`
       }),
     });
-    const { error: insertError } = await supabase.from('payments').insert({
+    const paymentRow = {
       auction_id: auctionId,
       bidder_id: user.id,
       advertisement_id: auction.advertisement_id,
@@ -77,8 +77,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       provider_order_id: orderId,
       payment_session_id: order.payment_session_id,
       status: 'PENDING',
-    });
-    if (insertError) throw insertError;
+    };
+    const { error: saveError } = existing
+      ? await supabase.from('payments').update({
+          payment_session_id: order.payment_session_id,
+          amount,
+          currency: auction.currency,
+          advertisement_id: auction.advertisement_id,
+        }).eq('auction_id', auctionId).eq('provider_order_id', orderId)
+      : await supabase.from('payments').upsert(paymentRow, { onConflict: 'auction_id', ignoreDuplicates: true });
+    if (saveError) throw saveError;
+    // Read back the winning reservation. Concurrent requests share the deterministic order ID.
+    const { data: saved, error: readError } = await supabase.from('payments')
+      .select('provider_order_id,payment_session_id,status')
+      .eq('auction_id', auctionId).single();
+    if (readError) throw readError;
+    if (saved.provider_order_id !== orderId || !saved.payment_session_id) {
+      return json(res, 409, { error: 'ORDER_RESERVATION_CONFLICT' });
+    }
     return json(res, 200, { orderId, paymentSessionId: order.payment_session_id, status: 'PENDING' });
   } catch (error) {
     const e = error as Error & { status?: number; details?: unknown };
