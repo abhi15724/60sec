@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getCurrencySymbol, getPreferredCurrency } from '../core/currency.ts';
 import { useMarketplace } from '../context/MarketplaceContext.tsx';
 import {
   Trophy,
@@ -32,6 +33,7 @@ export const AdvertiserDashboard: React.FC<AdvertiserDashboardProps> = ({
     getUserBids,
   } = useMarketplace();
 
+  const currencySymbol = getCurrencySymbol(nextSlotAuction?.currency || getPreferredCurrency());
   const [activeTab, setActiveTab] = useState<'bids' | 'scheduled' | 'ads' | 'analytics'>('bids');
 
   const userBids = getUserBids(currentUser.id);
