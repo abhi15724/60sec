@@ -90,7 +90,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
   const handlePlaceBidSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (bidAmount < minNextBid) {
-      setErrorMsg(`Your bid must be at least ${currencySymbol}{minNextBid}`);
+      setErrorMsg(`Your bid must be at least ${currencySymbol}${minNextBid}`);
       return;
     }
     setErrorMsg(null);
@@ -194,12 +194,12 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                   {nextSlotAuction.currentBid ? 'Current Highest Bid' : 'Starting Price'}
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-amber-400 mt-0.5 block">
-                  ${currentBid}
+                  {currencySymbol}{currentBid}
                 </span>
                 <span className="text-[10px] text-slate-400">
                   {nextSlotAuction.currentBid
-                    ? `Base: $${nextSlotAuction.startingBid}`
-                    : `Starts from prev end ($${nextSlotAuction.startingBid})`}
+                    ? `Base: ${currencySymbol}${nextSlotAuction.startingBid}`
+                    : `Starts from prev end (${currencySymbol}${nextSlotAuction.startingBid})`}
                 </span>
               </div>
 
@@ -220,11 +220,11 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
             <form onSubmit={handlePlaceBidSubmit} className="space-y-4 text-left">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Your Bid ($ USD)
+                  Your Bid ({currencySymbol})
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-400">
-                    $
+                    {currencySymbol}
                   </span>
                   <input
                     type="number"
@@ -246,7 +246,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
                         onClick={() => setBidAmount(quick)}
                         className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[11px] cursor-pointer touch-manipulation"
                       >
-                        +${quick - minNextBid}
+                        +{currencySymbol}{quick - minNextBid}
                       </button>
                     ))}
                   </div>
@@ -362,7 +362,7 @@ export const SingleSlotBidModal: React.FC<SingleSlotBidModalProps> = ({
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Current Highest</span>
-                <span className="font-mono text-slate-700">${currentBid}</span>
+                <span className="font-mono text-slate-700">{currencySymbol}{currentBid}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Your Bid</span>
