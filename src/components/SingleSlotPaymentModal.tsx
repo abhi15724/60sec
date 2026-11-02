@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext.tsx';
 import { Auction, AdSchedule } from '../core/types.ts';
+import { getCurrencySymbol, getPreferredCurrency } from '../core/currency.ts';
 import { Trophy, CheckCircle, CreditCard, X, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface SingleSlotPaymentModalProps {
@@ -44,6 +45,7 @@ export const SingleSlotPaymentModal: React.FC<SingleSlotPaymentModalProps> = ({
 
   if (!isOpen || !auction) return null;
 
+  const currencySymbol = getCurrencySymbol(auction?.currency || getPreferredCurrency());
   const winningAmount = auction.currentBid || auction.startingBid;
 
   const handleModalClose = (e?: React.MouseEvent) => {
