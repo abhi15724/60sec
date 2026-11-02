@@ -13,6 +13,7 @@ import {
   User,
 } from './types.ts';
 import { RealtimeEventHub } from './realtime.ts';
+import { getPreferredCurrency } from './currency.ts';
 
 export const realtimeHub = new RealtimeEventHub();
 
@@ -142,6 +143,7 @@ export const INITIAL_AUCTIONS: Auction[] = [
   {
     id: 'auc_next_homepage_slot',
     advertisementId: 'ad_aurora',
+    currency: getPreferredCurrency(),
     startingBid: 1.0,
     currentBid: 127.0,
     currentBidderId: 'user_competing_1',
