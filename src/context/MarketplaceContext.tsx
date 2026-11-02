@@ -4,6 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getPreferredCurrency } from '../core/currency.ts';
 import {
   Advertisement,
   Auction,
@@ -201,6 +202,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       operatingDay,
       auctionHour: getAuctionHourForSlot(slotNumber),
       slotNumber,
+      currency: previousAuction?.currency || getPreferredCurrency(),
       startingBid,
       currentBid: null,
       currentBidderId: null,
@@ -411,7 +413,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (!hasActive && prevAuctions.length > 0 && operatingWindow) {
           const lastAuction = prevAuctions[0];
           const newAuction = startNextAuction(ads, now, lastAuction);
-          setAuctionRemainingSeconds(60);
+          setAuctionRemainingSeconds(3600);
           return [newAuction, ...prevAuctions];
         }
 
