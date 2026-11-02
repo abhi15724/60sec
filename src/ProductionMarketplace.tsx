@@ -27,6 +27,7 @@ export function ProductionMarketplace() {
 
   useEffect(() => {
     let alive = true;
+    let unsubscribe: (() => void) | undefined;
     fetch('/api/public-config').then(r => r.json()).then((c: Config) => {
       if (!alive) return;
       setConfig(c);
@@ -35,10 +36,10 @@ export function ProductionMarketplace() {
         setClient(sb);
         sb.auth.getSession().then(({data}) => { if (alive) setSession(data.session); });
         const { data: listener } = sb.auth.onAuthStateChange((_event, next) => { if (alive) setSession(next); });
-        return () => listener.subscription.unsubscribe();
+        unsubscribe = () => listener.subscription.unsubscribe();
       }
     }).catch(() => setError('Could not load production configuration.'));
-    return () => { alive = false; };
+    return () => { alive = false; unsubscribe?.(); };
   }, []);
 
   const loadData = useCallback(async () => {
