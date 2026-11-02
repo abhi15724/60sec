@@ -88,10 +88,15 @@ alter table public.ad_slots enable row level security;
 alter table public.cashfree_webhook_events enable row level security;
 
 -- Authenticated users can read auction/bid data; all writes are server-side only.
+drop policy if exists "authenticated read auctions" on public.auctions;
 create policy "authenticated read auctions" on public.auctions for select to authenticated using (true);
+drop policy if exists "authenticated read bids" on public.bids;
 create policy "authenticated read bids" on public.bids for select to authenticated using (true);
+drop policy if exists "owners read own ads" on public.advertisements;
 create policy "owners read own ads" on public.advertisements for select to authenticated using (owner_id = auth.uid());
+drop policy if exists "owners read own payments" on public.payments;
 create policy "owners read own payments" on public.payments for select to authenticated using (bidder_id = auth.uid());
+drop policy if exists "authenticated read slots" on public.ad_slots;
 create policy "authenticated read slots" on public.ad_slots for select to authenticated using (true);
 -- No client insert/update/delete policies. Service-role API handlers perform privileged writes.
 
