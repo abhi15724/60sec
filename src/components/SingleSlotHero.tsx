@@ -2,6 +2,7 @@ import React from 'react';
 import { useMarketplace } from '../context/MarketplaceContext.tsx';
 import { Radio, ExternalLink, ArrowUpRight, RefreshCw, FastForward, Sparkles, CheckCircle2 } from 'lucide-react';
 import { calculateMinimumNextBid } from '../core/auction.ts';
+import { getCurrencySymbol, getPreferredCurrency } from '../core/currency.ts';
 
 interface SingleSlotHeroProps {
   onBidNowClick: () => void;
@@ -22,6 +23,9 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
     trackClickAndRedirect,
     simulateCompetingBid,
   } = useMarketplace();
+
+  const currency = nextSlotAuction?.currency || getPreferredCurrency();
+  const currencySymbol = getCurrencySymbol(currency);
 
   // Currently live advertisement
   const currentAd = currentLiveSchedule ? getAdById(currentLiveSchedule.advertisementId) : null;
@@ -212,12 +216,12 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
                 {nextSlotAuction?.currentBid ? 'Current Bid' : 'Starting Price'}
               </span>
               <div className="text-xl sm:text-3xl font-black text-slate-950 mt-0.5 sm:mt-1">
-                ${currentBid}
+                {currencySymbol}{currentBid}
               </div>
               <span className="text-[9px] sm:text-[11px] text-slate-500 mt-0.5 block">
                 {nextSlotAuction?.currentBid
-                  ? `Base: $${nextSlotAuction.startingBid}`
-                  : `Starts from prev end ($${nextSlotAuction?.startingBid || 1})`}
+                  ? `Base: {currencySymbol}{nextSlotAuction.startingBid}`
+                  : `Starts from prev end ({currencySymbol}{nextSlotAuction?.startingBid || 1})`}
               </span>
             </div>
 
@@ -241,7 +245,7 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
                 {formatAuctionCountdown(auctionRemainingSeconds)}
               </div>
               <span className="text-[9px] sm:text-[11px] text-slate-400 mt-0.5 block">
-                Server UTC cutoff
+                Auction timer (1 hour)
               </span>
             </div>
 
@@ -250,7 +254,7 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
                 Minimum Next Bid
               </span>
               <div className="text-xl sm:text-3xl font-black text-emerald-600 mt-0.5 sm:mt-1">
-                ${minNextBid}
+                {currencySymbol}{minNextBid}
               </div>
               <span className="text-[9px] sm:text-[11px] text-slate-400 mt-0.5 block">
                 {nextSlotAuction?.currentBid ? '+$1 min increment' : 'Initial bid meets base'}
@@ -264,7 +268,7 @@ export const SingleSlotHero: React.FC<SingleSlotHeroProps> = ({ onBidNowClick })
               onClick={onBidNowClick}
               className="w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl bg-slate-950 hover:bg-slate-800 active:scale-99 text-white font-black text-sm sm:text-lg transition shadow-lg flex items-center justify-center gap-2 cursor-pointer group touch-manipulation"
             >
-              <span>BID NOW (${minNextBid})</span>
+              <span>BID NOW ({currencySymbol}{minNextBid})</span>
               <ArrowUpRight className="h-5 w-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </button>
 
