@@ -7,6 +7,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const db=getSupabaseAdmin();
     const {error:ensureError}=await db.rpc('ensure_current_hourly_auctions');
     if (ensureError) throw ensureError;
+    const {error:refreshError}=await db.rpc('refresh_hourly_ad_slot_states');
+    if (refreshError) throw refreshError;
     const [auctions,slots]=await Promise.all([
       db.from('hourly_auctions').select('id,currency,starting_bid,current_bid,status,starts_at,ends_at,operating_day,auction_hour').in('status',['ACTIVE','UPCOMING']).order('currency').order('starts_at').limit(4),
       db.from('hourly_public_billboard').select('id,auction_id,advertisement_id,bidder_id,currency,amount,queue_position,starts_at,ends_at,status,brand_name,title,media_url,media_type,website_url').order('starts_at',{ascending:true}).limit(100)
