@@ -5,6 +5,10 @@ type Config = { configured: boolean; supabaseUrl: string | null; supabaseAnonKey
 type Auction = { id: string; currency: 'INR'|'USD'; starting_bid: number; current_bid: number|null; current_bidder_id: string|null; status: string; ends_at: string; advertisement_id: string|null; slot_number: number };
 type Ad = { id: string; brand_name: string; title: string; approval_status: string; ad_status: string; is_house_ad: boolean };
 type Slot = { id: string; starts_at: string; ends_at: string; status: string; advertisement_id: string; slot_number: number };
+type PublicMarketplace = {
+  auctions: Array<{id:string;currency:'INR'|'USD';startingBid:number;currentBid:number|null;status:string;endsAt:string;slotNumber:number}>;
+  slots: Array<{id:string;startsAt:string;endsAt:string;status:string;slotNumber:number;ad:{brandName:string;title:string;mediaUrl:string;mediaType:string;websiteUrl:string}}>;
+};
 declare global { interface Window { Cashfree?: (args: { mode: 'sandbox'|'production' }) => { checkout: (args: { paymentSessionId: string; redirectTarget: '_self' }) => Promise<unknown> } } }
 
 const money = (value: number, currency: string) => new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 2 }).format(value);
@@ -14,6 +18,8 @@ export function ProductionMarketplace() {
   const [config, setConfig] = useState<Config|null>(null);
   const [client, setClient] = useState<SupabaseClient|null>(null);
   const [session, setSession] = useState<Session|null>(null);
+  const [publicMarketplace, setPublicMarketplace] = useState<PublicMarketplace>({auctions:[],slots:[]});
+  const [showAuth, setShowAuth] = useState(false);
   const [email, setEmail] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [phone, setPhone] = useState('');
@@ -44,7 +50,7 @@ export function ProductionMarketplace() {
         unsubscribe = () => listener.subscription.unsubscribe();
       }
     }).catch(() => setError('Could not load production configuration.'));
-    return () => { alive = false; unsubscribe?.(); };
+    return () => { alive = false; unsubscribe?.(); window.clearInterval(publicRefresh); };
   }, []);
 
   const loadData = useCallback(async () => {
@@ -167,7 +173,31 @@ export function ProductionMarketplace() {
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-black">Production marketplace</h1><p className="text-sm text-slate-600">Auctions, bids and paid slot reservations are read from Supabase.</p></div><span className="rounded-full bg-amber-100 text-amber-900 px-3 py-1 text-xs font-bold">{config.paymentsEnabled ? `Payments: ${label(config.paymentEnvironment)}` : 'Payments safely disabled'}</span></div>
       {notice && <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800">{notice}</div>}
       {error && <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-sm text-rose-800">{error}</div>}
-      {!session ? <form onSubmit={sendMagicLink} className="max-w-md bg-white border rounded-2xl p-6 space-y-4"><h2 className="text-lg font-bold">Sign in to 60SEC</h2><p className="text-sm text-slate-600">We’ll email you a secure sign-in link. No demo accounts are used in production mode.</p><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com" className="w-full border rounded-lg px-3 py-3"/><button disabled={busy==='auth'} className="w-full rounded-lg bg-slate-950 text-white font-bold py-3 disabled:opacity-50">{busy==='auth'?'Sending…':'Send sign-in link'}</button>{otpSent && <p className="text-xs text-slate-500">Open the link in this browser to continue.</p>}</form> : <>
+      {!session ? <>
+        <section className="rounded-3xl bg-slate-950 text-white p-7 sm:p-10">
+          <p className="text-xs uppercase tracking-[0.25em] text-amber-300 font-bold">The 60-second advertising marketplace</p>
+          <h2 className="mt-3 text-3xl sm:text-5xl font-black max-w-3xl">Every minute is a chance to get noticed.</h2>
+          <p className="mt-4 text-slate-300 max-w-2xl">Watch the live advertisement, explore upcoming broadcasts and see open slot auctions. No account needed to browse.</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button onClick={()=>setShowAuth(true)} className="rounded-xl bg-amber-300 text-slate-950 px-5 py-3 font-black">Advertise on 60SEC</button>
+            <button onClick={()=>setShowAuth(true)} className="rounded-xl border border-white/30 px-5 py-3 font-bold">Sign in to bid</button>
+          </div>
+        </section>
+        <section className="grid lg:grid-cols-2 gap-5">
+          <div className="bg-white border rounded-2xl p-5">
+            <h2 className="font-bold text-lg mb-3">Open slot auctions</h2>
+            {publicMarketplace.auctions.length===0?<p className="text-sm text-slate-500">There are no open auctions right now. Check back soon.</p>:<div className="space-y-3">{publicMarketplace.auctions.map(a=><article key={a.id} className="border rounded-xl p-4"><div className="flex justify-between gap-3"><div className="font-bold">60-second slot #{a.slotNumber}</div><span className="text-xs rounded-full bg-emerald-50 text-emerald-800 px-2 py-1">{label(a.status)}</span></div><div className="text-2xl font-black mt-2">{money(Number(a.currentBid??a.startingBid),a.currency)}</div><p className="text-xs text-slate-500 mt-1">Auction closes {new Date(a.endsAt).toLocaleString()}</p><button onClick={()=>setShowAuth(true)} className="mt-3 w-full rounded-lg bg-slate-950 text-white py-2.5 font-bold">Sign in to place a bid</button></article>)}</div>}
+          </div>
+          <div className="bg-white border rounded-2xl p-5">
+            <h2 className="font-bold text-lg mb-3">Live & upcoming advertisements</h2>
+            {publicMarketplace.slots.length===0?<p className="text-sm text-slate-500">No approved advertisements are scheduled yet.</p>:<div className="space-y-3">{publicMarketplace.slots.map(slot=><article key={slot.id} className="border rounded-xl p-3 flex gap-3">
+              {slot.ad.mediaType.startsWith('image/')?<img src={slot.ad.mediaUrl} alt={slot.ad.title} className="w-28 h-20 object-cover rounded-lg bg-slate-100"/>:<video src={slot.ad.mediaUrl} className="w-28 h-20 object-cover rounded-lg bg-slate-100" muted playsInline/>}
+              <div className="min-w-0"><div className="font-bold">{slot.ad.brandName}</div><div className="text-sm">{slot.ad.title}</div><div className="text-xs text-slate-500 mt-1">{label(slot.status)} · {new Date(slot.startsAt).toLocaleString()}</div>{slot.ad.websiteUrl && <a href={slot.ad.websiteUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-700 underline">Visit advertiser</a>}</div>
+            </article>)}</div>}
+          </div>
+        </section>
+        {showAuth && <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm grid place-items-center p-4"><form onSubmit={sendMagicLink} className="w-full max-w-md bg-white border rounded-2xl p-6 space-y-4 shadow-2xl"><div className="flex justify-between items-center"><h2 className="text-lg font-bold">Sign in to 60SEC</h2><button type="button" onClick={()=>setShowAuth(false)} className="text-slate-500 text-2xl" aria-label="Close sign in">×</button></div><p className="text-sm text-slate-600">Sign in is only needed to place bids, submit ads or manage your advertiser account.</p><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com" className="w-full border rounded-lg px-3 py-3"/><button disabled={busy==='auth'} className="w-full rounded-lg bg-slate-950 text-white font-bold py-3 disabled:opacity-50">{busy==='auth'?'Sending…':'Send secure sign-in link'}</button>{otpSent && <p className="text-xs text-emerald-700">Check your email and open the sign-in link in this browser.</p>}</form></div>}
+      </> : <>
         {!session.user.phone && <section className="bg-white border border-amber-200 rounded-2xl p-5 space-y-3"><h2 className="font-bold">Verify your phone before payment</h2><p className="text-sm text-slate-600">Cashfree requires a customer phone number. Verify it with an SMS code; the server uses the verified Supabase phone claim.</p><div className="flex flex-wrap gap-2"><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+919876543210" className="flex-1 min-w-56 border rounded-lg p-2"/><button disabled={busy==='phone'} onClick={sendPhoneCode} className="bg-slate-950 text-white rounded-lg px-4 py-2 disabled:opacity-50">{phoneOtpSent?'Resend code':'Send SMS code'}</button></div>{phoneOtpSent && <div className="flex gap-2"><input value={phoneCode} onChange={e=>setPhoneCode(e.target.value)} placeholder="SMS code" className="flex-1 border rounded-lg p-2"/><button disabled={busy==='phone'} onClick={verifyPhoneCode} className="bg-emerald-700 text-white rounded-lg px-4 py-2">Verify phone</button></div>}</section>}
         <div className="grid lg:grid-cols-2 gap-5">
           <section className="bg-white border rounded-2xl p-5"><h2 className="font-bold text-lg mb-3">Open auctions</h2>{auctions.length===0?<p className="text-sm text-slate-500">No active or awaiting-payment auctions are currently in the database.</p>:<div className="space-y-4">{auctions.map(auction=><article key={auction.id} className="border rounded-xl p-4 space-y-3"><div className="flex justify-between gap-3"><div><div className="font-bold">{auction.id}</div><div className="text-xs text-slate-500">Slot #{auction.slot_number} · closes {new Date(auction.ends_at).toLocaleString()}</div></div><span className="text-xs font-bold rounded-full bg-slate-100 px-2 py-1 h-fit">{label(auction.status)}</span></div><div className="text-2xl font-black">{money(Number(auction.current_bid ?? auction.starting_bid),auction.currency)}</div>{auction.status==='ACTIVE'?<div className="space-y-2"><select className="w-full border rounded-lg p-2" value={selectedAds[auction.id]||''} onChange={e=>setSelectedAds(s=>({...s,[auction.id]:e.target.value}))}><option value="">Choose approved ad</option>{approvedAds.map(ad=><option key={ad.id} value={ad.id}>{ad.brand_name} — {ad.title}</option>)}</select><input type="number" min={Number(auction.current_bid ?? auction.starting_bid-1)+1} step="1" value={bidAmounts[auction.id]||''} onChange={e=>setBidAmounts(s=>({...s,[auction.id]:e.target.value}))} placeholder={`Minimum ${Number(auction.current_bid ?? auction.starting_bid-1)+1}`} className="w-full border rounded-lg p-2"/><button disabled={!!busy || approvedAds.length===0} onClick={()=>placeBid(auction)} className="w-full bg-slate-950 text-white rounded-lg py-2.5 font-bold disabled:opacity-40">{busy===auction.id?'Submitting…':'Place server-validated bid'}</button>{approvedAds.length===0&&<p className="text-xs text-amber-700">You have no approved active commercial ads. Submit an ad for review before bidding.</p>}</div>:auction.current_bidder_id===session.user.id?<button disabled={!!busy || !config.paymentsEnabled} onClick={()=>pay(auction)} className="w-full rounded-lg bg-emerald-700 text-white py-2.5 font-bold disabled:opacity-40">{config.paymentsEnabled?'Continue to Cashfree Checkout':'Winner payment pending — live payments disabled'}</button>:<p className="text-sm text-slate-500">Awaiting winner payment.</p>}</article>)}</div>}</section>
