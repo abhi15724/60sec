@@ -158,6 +158,17 @@ export function ProductionMarketplace() {
     finally { setBusy(''); }
   };
 
+  useEffect(() => {
+    if (!session || !pendingBid || !config?.paymentsEnabled) return;
+    const auction = auctions.find(a => a.id === pendingBid.auctionId);
+    if (!auction) return;
+    const pending = pendingBid;
+    setPendingBid(null);
+    setSelectedAds(s => ({...s,[pending.auctionId]:pending.advertisementId}));
+    setBidAmounts(s => ({...s,[pending.auctionId]:String(pending.amount)}));
+    void placeBid({...auction, id:pending.auctionId});
+  }, [session, pendingBid, config, auctions]);
+
   const pay = async (auction: Auction) => {
     if (!config?.paymentsEnabled) return setError('Payments are disabled by the production safety switch.');
     if (!window.Cashfree) {
@@ -215,7 +226,7 @@ export function ProductionMarketplace() {
       {error && <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-sm text-rose-800">{error}</div>}
       <>
       <section className="max-w-5xl mx-auto space-y-5">
-        <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-rose-600"><span className="h-2 w-2 rounded-full bg-rose-500 animate-ping"/> On air now</div><span className="font-mono text-sm text-slate-500">{liveSlot ? `SLOT ${String(liveSlot.queue_position).padStart(3,'0')}` : liveAd?.is_house_ad ? 'HOUSE AD' : 'BILLBOARD READY'}</span></div>
+        <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-rose-600"><span className="h-2 w-2 rounded-full bg-rose-500 animate-ping"/> On air now</div><span className="font-mono text-sm text-slate-500">{liveSlot ? `PAID SLOT ${String(liveSlot.queue_position).padStart(3,'0')}` : houseAds.length ? 'HOUSE AD' : 'BILLBOARD READY'}</span></div>
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-2xl">
           {liveAd ? <><div className="relative aspect-video bg-black">{liveAd.media_type?.startsWith('video/') ? <video src={liveAd.media_url} autoPlay muted playsInline className="h-full w-full object-contain"/> : <img src={liveAd.media_url} alt={liveAd.title} className="h-full w-full object-contain"/>}<div className="absolute right-4 top-4 rounded-xl bg-black/80 px-4 py-2 font-mono text-2xl font-black text-rose-400">00:{String(liveSeconds).padStart(2,'0')}</div></div><div className="flex flex-wrap items-center justify-between gap-4 p-5"><div><div className="text-xs font-black uppercase tracking-widest text-amber-400">{liveAd.brand_name}</div><h2 className="mt-1 text-2xl font-black">{liveAd.title}</h2></div><a href={liveAd.website_url} target="_blank" rel="noreferrer" className="rounded-xl bg-white px-5 py-3 font-black text-slate-950">Visit advertiser website ↗</a></div></> : <div className="p-10 text-center sm:p-16"><div className="text-xs font-black uppercase tracking-widest text-amber-400">60SEC LIVE BILLBOARD</div><h2 className="mt-3 text-2xl font-black sm:text-3xl">Your brand could be on air next</h2><p className="mt-2 text-sm text-slate-300">House advertisements rotate automatically until a paid, approved booking takes over.</p></div>}
         </div>
