@@ -53,7 +53,7 @@ export function ProductionMarketplace() {
     if (!client) return;
     const [a, ownAds, schedule] = await Promise.all([
       client.from('auctions').select('id,currency,starting_bid,current_bid,current_bidder_id,status,ends_at,advertisement_id,slot_number').in('status',['ACTIVE','AWAITING_PAYMENT']).order('ends_at',{ascending:true}).limit(30),
-      client.from('advertisements').select('id,brand_name,title,approval_status,ad_status,is_house_ad').order('created_at',{ascending:false}),
+      session ? client.from('advertisements').select('id,brand_name,title,approval_status,ad_status,is_house_ad').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
       client.from('ad_slots').select('id,starts_at,ends_at,status,advertisement_id,slot_number').in('status',['LIVE','SCHEDULED']).order('starts_at',{ascending:true}).limit(30),
     ]);
     if (a.error || ownAds.error || schedule.error) throw new Error(a.error?.message || ownAds.error?.message || schedule.error?.message || 'Unable to load marketplace');
