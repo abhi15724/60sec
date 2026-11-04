@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSupabaseAdmin, json, verifyCashfreeWebhook } from '../_lib/cashfree';
+import { getSupabaseAdmin, json, verifyCashfreeWebhook } from '../_lib/cashfree.js';
 
 export const config = { api: { bodyParser: false } };
 
