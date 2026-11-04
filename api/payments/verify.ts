@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { cashfreeRequest, getSupabaseAdmin, json, requireMethod, requireUser } from '../_lib/cashfree';
+import { cashfreeRequest, getSupabaseAdmin, json, requireMethod, requireUser } from '../_lib/cashfree.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!requireMethod(req, res, 'POST')) return;
