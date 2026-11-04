@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSupabaseAdmin, json, requireMethod, requireUser } from './_lib/cashfree';
+import { getSupabaseAdmin, json, requireMethod, requireUser } from './_lib/cashfree.js';
 
 const allowedMediaTypes = new Set(['image/jpeg','image/png','image/webp','video/mp4','video/webm']);
 function safeHttpsUrl(value: unknown) {
