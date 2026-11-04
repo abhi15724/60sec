@@ -14,15 +14,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const type = payload?.type;
     const orderId = payload?.data?.order?.order_id;
     const payment = payload?.data?.payment;
-    if (type !== 'PAYMENT_SUCCESS_WEBHOOK' || !orderId || !payment?.cf_payment_id
+    if (!orderId) return json(res, 200, { received: true, ignored: true });
+    const supabase = getSupabaseAdmin();
+    if (type === 'PAYMENT_FAILED_WEBHOOK' || payment?.payment_status === 'FAILED') {
+      const { data: hourlyFailure, error: lookupError } = await supabase.from('hourly_payments')
+        .select('provider_order_id').eq('provider_order_id', orderId).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (hourlyFailure) {
+        const { data: failed, error: failError } = await supabase.rpc('fail_hourly_cashfree_payment', { p_order_id: orderId });
+        if (failError) throw failError;
+        return json(res, 200, { received: true, status: failed?.status || 'FAILED' });
+      }
+      return json(res, 200, { received: true, ignored: true });
+    }
+    if (type !== 'PAYMENT_SUCCESS_WEBHOOK' || !payment?.cf_payment_id
       || payment.payment_status !== 'SUCCESS') {
       return json(res, 200, { received: true, ignored: true });
     }
 
-    const supabase = getSupabaseAdmin();
-    const { data: stored, error } = await supabase.from('payments')
-      .select('provider_order_id,amount,currency,status')
-      .eq('provider_order_id', orderId).maybeSingle();
+    const { data: hourly, error: hourlyError } = await supabase.from('hourly_payments')
+      .select('provider_order_id,amount,currency,status').eq('provider_order_id', orderId).maybeSingle();
+    if (hourlyError) throw hourlyError;
+    const { data: stored, error } = hourly ? { data: hourly, error: null } : await supabase.from('payments')
+      .select('provider_order_id,amount,currency,status').eq('provider_order_id', orderId).maybeSingle();
     if (error) throw error;
     if (!stored) return json(res, 404, { error: 'UNKNOWN_ORDER' });
 
@@ -32,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return json(res, 400, { error: 'PAYMENT_AMOUNT_OR_CURRENCY_MISMATCH' });
     }
     const eventKey = `webhook:${orderId}:${payment.cf_payment_id}`;
-    const { data: result, error: confirmError } = await supabase.rpc('confirm_cashfree_payment', {
+    const { data: result, error: confirmError } = await supabase.rpc(hourly ? 'confirm_hourly_cashfree_payment' : 'confirm_cashfree_payment', {
       p_order_id: orderId,
       p_provider_payment_id: String(payment.cf_payment_id),
       p_event_key: eventKey,
