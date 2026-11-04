@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { cashfreeRequest, getSupabaseAdmin, json, makeOrderId, requireMethod, requireUser } from '../_lib/cashfree';
+import { cashfreeRequest, getSupabaseAdmin, json, makeOrderId, requireMethod, requireUser } from '../_lib/cashfree.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
 
