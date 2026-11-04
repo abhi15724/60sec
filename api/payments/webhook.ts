@@ -20,9 +20,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const supabase = getSupabaseAdmin();
-    const { data: stored, error } = await supabase.from('payments')
-      .select('provider_order_id,amount,currency,status')
-      .eq('provider_order_id', orderId).maybeSingle();
+    const { data: hourly, error: hourlyError } = await supabase.from('hourly_payments')
+      .select('provider_order_id,amount,currency,status').eq('provider_order_id', orderId).maybeSingle();
+    if (hourlyError) throw hourlyError;
+    const { data: stored, error } = hourly ? { data: hourly, error: null } : await supabase.from('payments')
+      .select('provider_order_id,amount,currency,status').eq('provider_order_id', orderId).maybeSingle();
     if (error) throw error;
     if (!stored) return json(res, 404, { error: 'UNKNOWN_ORDER' });
 
@@ -32,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return json(res, 400, { error: 'PAYMENT_AMOUNT_OR_CURRENCY_MISMATCH' });
     }
     const eventKey = `webhook:${orderId}:${payment.cf_payment_id}`;
-    const { data: result, error: confirmError } = await supabase.rpc('confirm_cashfree_payment', {
+    const { data: result, error: confirmError } = await supabase.rpc(hourly ? 'confirm_hourly_cashfree_payment' : 'confirm_cashfree_payment', {
       p_order_id: orderId,
       p_provider_payment_id: String(payment.cf_payment_id),
       p_event_key: eventKey,
