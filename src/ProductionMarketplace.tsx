@@ -195,6 +195,7 @@ export function ProductionMarketplace() {
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-black">60SEC · The live advertising billboard</h1><p className="text-sm text-slate-600">Watch the live ad, follow the auction and bid for upcoming 60-second slots.</p></div><span className="rounded-full bg-emerald-100 text-emerald-900 px-3 py-1 text-xs font-bold">LIVE MARKETPLACE</span></div>
       {notice && <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800">{notice}</div>}
       {error && <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-sm text-rose-800">{error}</div>}
+      {!session ? <>
       <section className="max-w-5xl mx-auto space-y-5">
         <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-rose-600"><span className="h-2 w-2 rounded-full bg-rose-500 animate-ping"/> On air now</div><span className="font-mono text-sm text-slate-500">{liveSlot ? `SLOT ${String(liveSlot.slot_number).padStart(3,'0')}` : 'BILLBOARD READY'}</span></div>
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-2xl">
