@@ -22,8 +22,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       throw error;
     }
     const bidResult = data as { bid_id: string; order_id: string; amount: number; currency: string; minimum_next_bid: number };
-    const phone = String(user.phone || user.user_metadata?.phone || '').replace(/\\D/g, '');
-    if (!user.email || !/^\\d{10,12}$/.test(phone)) {
+    const phone = String(user.phone || user.user_metadata?.phone || '').replace(/\D/g, '');
+    if (!user.email || !/^\d{10,12}$/.test(phone)) {
       await db.rpc('fail_hourly_cashfree_payment', { p_order_id: bidResult.order_id });
       return json(res, 400, { error: !user.email ? 'VERIFIED_CUSTOMER_EMAIL_REQUIRED' : 'VERIFIED_CUSTOMER_PHONE_REQUIRED' });
     }
