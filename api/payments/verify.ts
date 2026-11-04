@@ -27,6 +27,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const successful = Array.isArray(providerPayments)
       ? providerPayments.find((p: any) => p.payment_status === 'SUCCESS')
       : null;
+    if (!successful && hourly && (
+      ['FAILED','EXPIRED','CANCELLED'].includes(String(order.order_status))
+      || (Array.isArray(providerPayments) && providerPayments.length > 0
+        && providerPayments.every((p: any) => p.payment_status === 'FAILED'))
+    )) {
+      const { data: failed, error: failError } = await supabase.rpc('fail_hourly_cashfree_payment', { p_order_id: orderId });
+      if (failError) throw failError;
+      return json(res, 200, { status: failed?.status || 'FAILED' });
+    }
     if (!successful || order.order_status !== 'PAID'
       || Number(order.order_amount) !== Number(payment.amount)
       || order.order_currency !== payment.currency
