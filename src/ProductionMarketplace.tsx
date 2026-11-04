@@ -15,6 +15,8 @@ export function ProductionMarketplace() {
   const [client, setClient] = useState<SupabaseClient|null>(null);
   const [session, setSession] = useState<Session|null>(null);
   const [email, setEmail] = useState('');
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin'|'signup'>('signin');
   const [otpSent, setOtpSent] = useState(false);
   const [phone, setPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
@@ -48,19 +50,21 @@ export function ProductionMarketplace() {
   }, []);
 
   const loadData = useCallback(async () => {
-    if (!client || !session) return;
+    if (!client) return;
     const [a, ownAds, schedule] = await Promise.all([
       client.from('auctions').select('id,currency,starting_bid,current_bid,current_bidder_id,status,ends_at,advertisement_id,slot_number').in('status',['ACTIVE','AWAITING_PAYMENT']).order('ends_at',{ascending:true}).limit(30),
       client.from('advertisements').select('id,brand_name,title,approval_status,ad_status,is_house_ad').order('created_at',{ascending:false}),
       client.from('ad_slots').select('id,starts_at,ends_at,status,advertisement_id,slot_number').in('status',['LIVE','SCHEDULED']).order('starts_at',{ascending:true}).limit(30),
     ]);
     if (a.error || ownAds.error || schedule.error) throw new Error(a.error?.message || ownAds.error?.message || schedule.error?.message || 'Unable to load marketplace');
-    setAuctions(a.data || []); setAds(ownAds.data || []); setSlots(schedule.data || []);
+    setAuctions(a.data || []); setSlots(schedule.data || []);
+    if (session) setAds(ownAds.data || []);
   }, [client, session]);
 
   useEffect(() => {
-    if (!client || !session) return;
+    if (!client) return;
     loadData().catch(e => setError(e.message));
+    if (!session) return;
     const channel = client.channel('live-marketplace')
       .on('postgres_changes',{event:'*',schema:'public',table:'auctions'},()=>loadData().catch(e=>setError(e.message)))
       .on('postgres_changes',{event:'*',schema:'public',table:'bids'},()=>loadData().catch(e=>setError(e.message)))
@@ -81,9 +85,9 @@ export function ProductionMarketplace() {
   const sendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault(); if (!client) return;
     setBusy('auth'); setError(''); setNotice('');
-    const {error: authError} = await client.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:window.location.origin}});
+    const {error: authError} = await client.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:window.location.origin, shouldCreateUser:authMode === 'signup'}});
     setBusy('');
-    if (authError) setError(authError.message); else { setOtpSent(true); setNotice('Check your email for the secure sign-in link.'); }
+    if (authError) setError(authError.message); else { setOtpSent(true); setNotice(authMode === 'signup' ? 'Check your email to complete your 60SEC account registration.' : 'Check your email for the secure sign-in link.'); }
   };
 
   const sendPhoneCode = async () => {
@@ -161,13 +165,60 @@ export function ProductionMarketplace() {
   if (!config) return <main className="min-h-screen grid place-items-center text-slate-600">Loading 60SEC production marketplace…</main>;
   if (!config.configured || !client) return <main className="min-h-screen grid place-items-center p-8"><div className="max-w-lg text-center"><h1 className="text-3xl font-black">60SEC</h1><p className="mt-3 text-slate-600">Production mode requires SUPABASE_URL and SUPABASE_ANON_KEY in the Vercel project environment.</p></div></main>;
 
-  return <main className="min-h-screen bg-slate-50 text-slate-950">
-    <header className="bg-slate-950 text-white px-5 py-5"><div className="max-w-6xl mx-auto flex items-center justify-between gap-4"><div><div className="text-2xl font-black tracking-tight">60SEC</div><div className="text-xs text-slate-300">Live marketplace · server-authoritative</div></div>{session && <div className="flex items-center gap-3 text-sm"><span className="hidden sm:block">{session.user.email}</span><button className="rounded-lg border border-white/30 px-3 py-2" onClick={()=>client.auth.signOut()}>Sign out</button></div>}</div></header>
-    <section className="max-w-6xl mx-auto p-5 sm:p-8 space-y-6">
+  return <main className="min-h-screen bg-white text-slate-950">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6">
+      <div className="max-w-6xl mx-auto h-16 flex items-center justify-between gap-4">
+        <button onClick={()=>{setAuthOpen(false);window.scrollTo({top:0,behavior:'smooth'});}} className="flex items-center gap-2 text-left">
+          <span className="h-9 w-9 rounded-xl bg-slate-950 text-white grid place-items-center font-black">60</span>
+          <span className="text-xl font-black tracking-tight">60SEC</span>
+        </button>
+        <nav className="hidden md:flex items-center gap-1 text-sm font-semibold text-slate-600">
+          <a href="#how-it-works" className="px-3 py-2 rounded-lg hover:bg-slate-50">How It Works</a>
+          <a href="#advertise" className="px-3 py-2 rounded-lg hover:bg-slate-50">Advertise</a>
+          {session && <a href="#my-bids" className="px-3 py-2 rounded-lg hover:bg-slate-50">My Bids</a>}
+        </nav>
+        <div className="flex items-center gap-2">
+          {session ? <><span className="hidden sm:block text-xs text-slate-500">{session.user.email}</span><button className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold" onClick={()=>client.auth.signOut()}>Sign out</button></> : <>
+            <button onClick={()=>{setAuthMode('signin');setAuthOpen(true);}} className="rounded-xl px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">Sign In</button>
+            <button onClick={()=>{setAuthMode('signup');setAuthOpen(true);}} className="rounded-xl bg-slate-950 text-white px-4 py-2 text-sm font-bold hover:bg-slate-800">Sign Up</button>
+          </>}
+        </div>
+      </div>
+    </header>
+    <section className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-black">Production marketplace</h1><p className="text-sm text-slate-600">Auctions, bids and paid slot reservations are read from Supabase.</p></div><span className="rounded-full bg-amber-100 text-amber-900 px-3 py-1 text-xs font-bold">{config.paymentsEnabled ? `Payments: ${label(config.paymentEnvironment)}` : 'Payments safely disabled'}</span></div>
       {notice && <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800">{notice}</div>}
       {error && <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-sm text-rose-800">{error}</div>}
-      {!session ? <form onSubmit={sendMagicLink} className="max-w-md bg-white border rounded-2xl p-6 space-y-4"><h2 className="text-lg font-bold">Sign in to 60SEC</h2><p className="text-sm text-slate-600">We’ll email you a secure sign-in link. No demo accounts are used in production mode.</p><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com" className="w-full border rounded-lg px-3 py-3"/><button disabled={busy==='auth'} className="w-full rounded-lg bg-slate-950 text-white font-bold py-3 disabled:opacity-50">{busy==='auth'?'Sending…':'Send sign-in link'}</button>{otpSent && <p className="text-xs text-slate-500">Open the link in this browser to continue.</p>}</form> : <>
+      {!session ? <>
+        <section className="py-8 sm:py-14 text-center space-y-4">
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-slate-700"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"/> Single scarce advertising slot</span>
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight uppercase">THE NEXT 60 SECONDS</h1>
+          <p className="max-w-xl mx-auto text-base sm:text-xl text-slate-600">One homepage. One advertising slot. One winning brand.</p>
+        </section>
+        <section className="max-w-4xl mx-auto space-y-3">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-rose-600"><span className="h-2 w-2 rounded-full bg-rose-500 animate-ping"/> Current advertisement · broadcasting live</div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-8 sm:p-14 text-center text-white shadow-2xl">
+            <div className="text-amber-400 text-xs font-black tracking-widest">60SEC LIVE BILLBOARD</div>
+            <h2 className="mt-3 text-2xl sm:text-3xl font-black">Your brand could own this slot</h2>
+            <p className="mt-2 text-sm text-slate-300">A dedicated 60-second homepage broadcast with a direct link to your website.</p>
+            <button onClick={()=>{setAuthMode('signup');setAuthOpen(true);}} className="mt-6 rounded-xl bg-white text-slate-950 px-6 py-3 font-black">Advertise on 60SEC</button>
+          </div>
+        </section>
+        <section className="max-w-4xl mx-auto py-8 grid sm:grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-slate-200 p-5"><div className="text-2xl font-black">60s</div><div className="text-sm text-slate-500">Exclusive broadcast duration</div></div>
+          <div className="rounded-2xl border border-slate-200 p-5"><div className="text-2xl font-black">60</div><div className="text-sm text-slate-500">Slots in every hourly auction</div></div>
+          <div className="rounded-2xl border border-slate-200 p-5"><div className="text-2xl font-black">1 brand</div><div className="text-sm text-slate-500">Owns each scheduled window</div></div>
+        </section>
+        <section id="how-it-works" className="py-10 border-y border-slate-200">
+          <div className="max-w-4xl mx-auto"><div className="text-center"><span className="text-xs font-black uppercase tracking-widest text-slate-500">Scarcity & mechanics</span><h2 className="mt-2 text-3xl font-black">HOW IT WORKS</h2><p className="mt-2 text-sm text-slate-600">One homepage. One advertising slot. One winning brand.</p></div>
+            <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {['Create your ad|Submit your brand creative, headline and destination website URL.','Bid for the next slot|Compete for a scarce 60-second homepage broadcast.','Win the auction|The highest eligible bidder wins the next slot.','Pay securely|Winning requires verified payment before reservation.','Get your exact window|Receive a non-overlapping 60-second time window.','Own the homepage|Your brand takes over the homepage with a live countdown.'].map((item,i)=><article key={item} className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="font-mono text-lg font-black text-slate-300">0{i+1}</div><h3 className="mt-3 font-bold">{item.split('|')[0]}</h3><p className="mt-1 text-xs leading-relaxed text-slate-600">{item.split('|')[1]}</p></article>)}
+            </div>
+          </div>
+        </section>
+        <section id="advertise" className="py-10 text-center"><h2 className="text-2xl font-black">READY TO OWN THE NEXT 60 SECONDS?</h2><p className="mt-2 text-sm text-slate-600">Create an account to submit your advertisement and participate in live auctions.</p><button onClick={()=>{setAuthMode('signup');setAuthOpen(true);}} className="mt-5 rounded-xl bg-slate-950 text-white px-6 py-3 font-bold">Get Started · Sign Up</button></section>
+        {authOpen && <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm grid place-items-center p-4" onClick={()=>setAuthOpen(false)}><form onSubmit={sendMagicLink} onClick={e=>e.stopPropagation()} className="w-full max-w-md bg-white border rounded-2xl p-6 shadow-2xl space-y-4"><div className="flex items-start justify-between"><div><h2 className="text-xl font-black">{authMode==='signup'?'Create your 60SEC account':'Welcome back'}</h2><p className="text-sm text-slate-500 mt-1">{authMode==='signup'?'Sign up with your email to get started.':'Sign in securely using your email.'}</p></div><button type="button" onClick={()=>setAuthOpen(false)} className="text-slate-500 text-xl">×</button></div><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com" className="w-full border rounded-xl px-3 py-3"/><button disabled={busy==='auth'} className="w-full rounded-xl bg-slate-950 text-white font-bold py-3 disabled:opacity-50">{busy==='auth'?'Sending…':authMode==='signup'?'Send sign-up link':'Send sign-in link'}</button>{otpSent&&<p className="text-xs text-emerald-700">Check your email and open the secure link in this browser.</p>}<p className="text-center text-xs text-slate-500">{authMode==='signup'?'Already registered?':'New to 60SEC?'} <button type="button" className="font-bold text-slate-950 underline" onClick={()=>{setAuthMode(authMode==='signup'?'signin':'signup');setOtpSent(false);setNotice('');setError('');}}>{authMode==='signup'?'Sign in':'Create an account'}</button></p></form></div>}
+      </> : <>
         {!session.user.phone && <section className="bg-white border border-amber-200 rounded-2xl p-5 space-y-3"><h2 className="font-bold">Verify your phone before payment</h2><p className="text-sm text-slate-600">Cashfree requires a customer phone number. Verify it with an SMS code; the server uses the verified Supabase phone claim.</p><div className="flex flex-wrap gap-2"><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+919876543210" className="flex-1 min-w-56 border rounded-lg p-2"/><button disabled={busy==='phone'} onClick={sendPhoneCode} className="bg-slate-950 text-white rounded-lg px-4 py-2 disabled:opacity-50">{phoneOtpSent?'Resend code':'Send SMS code'}</button></div>{phoneOtpSent && <div className="flex gap-2"><input value={phoneCode} onChange={e=>setPhoneCode(e.target.value)} placeholder="SMS code" className="flex-1 border rounded-lg p-2"/><button disabled={busy==='phone'} onClick={verifyPhoneCode} className="bg-emerald-700 text-white rounded-lg px-4 py-2">Verify phone</button></div>}</section>}
         <div className="grid lg:grid-cols-2 gap-5">
           <section className="bg-white border rounded-2xl p-5"><h2 className="font-bold text-lg mb-3">Open auctions</h2>{auctions.length===0?<p className="text-sm text-slate-500">No active or awaiting-payment auctions are currently in the database.</p>:<div className="space-y-4">{auctions.map(auction=><article key={auction.id} className="border rounded-xl p-4 space-y-3"><div className="flex justify-between gap-3"><div><div className="font-bold">{auction.id}</div><div className="text-xs text-slate-500">Slot #{auction.slot_number} · closes {new Date(auction.ends_at).toLocaleString()}</div></div><span className="text-xs font-bold rounded-full bg-slate-100 px-2 py-1 h-fit">{label(auction.status)}</span></div><div className="text-2xl font-black">{money(Number(auction.current_bid ?? auction.starting_bid),auction.currency)}</div>{auction.status==='ACTIVE'?<div className="space-y-2"><select className="w-full border rounded-lg p-2" value={selectedAds[auction.id]||''} onChange={e=>setSelectedAds(s=>({...s,[auction.id]:e.target.value}))}><option value="">Choose approved ad</option>{approvedAds.map(ad=><option key={ad.id} value={ad.id}>{ad.brand_name} — {ad.title}</option>)}</select><input type="number" min={Number(auction.current_bid ?? auction.starting_bid-1)+1} step="1" value={bidAmounts[auction.id]||''} onChange={e=>setBidAmounts(s=>({...s,[auction.id]:e.target.value}))} placeholder={`Minimum ${Number(auction.current_bid ?? auction.starting_bid-1)+1}`} className="w-full border rounded-lg p-2"/><button disabled={!!busy || approvedAds.length===0} onClick={()=>placeBid(auction)} className="w-full bg-slate-950 text-white rounded-lg py-2.5 font-bold disabled:opacity-40">{busy===auction.id?'Submitting…':'Place server-validated bid'}</button>{approvedAds.length===0&&<p className="text-xs text-amber-700">You have no approved active commercial ads. Submit an ad for review before bidding.</p>}</div>:auction.current_bidder_id===session.user.id?<button disabled={!!busy || !config.paymentsEnabled} onClick={()=>pay(auction)} className="w-full rounded-lg bg-emerald-700 text-white py-2.5 font-bold disabled:opacity-40">{config.paymentsEnabled?'Continue to Cashfree Checkout':'Winner payment pending — live payments disabled'}</button>:<p className="text-sm text-slate-500">Awaiting winner payment.</p>}</article>)}</div>}</section>
