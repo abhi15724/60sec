@@ -19,6 +19,29 @@ export function ProductionMarketplace() {
   const [authMode, setAuthMode] = useState<'signin'|'signup'>('signin');
   const [pendingBid, setPendingBid] = useState<{auctionId:string; advertisementId:string; amount:number}|null>(null);
   const [now, setNow] = useState(Date.now());
+  // Perpetual auction clock: one parent auction hour contains 60 one-minute ad slots.
+  const auctionClock = useMemo(() => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    }).formatToParts(new Date(now));
+    const part = (name: string) => Number(parts.find(p => p.type === name)?.value ?? 0);
+    const hour = part('hour');
+    const minute = part('minute');
+    const second = part('second');
+    const slotInHour = minute + 1;
+    const slotOfDay = hour * 60 + slotInHour;
+    const slotSecondsRemaining = 60 - second;
+    const hourSecondsRemaining = 3600 - (minute * 60 + second);
+    const format = (total: number) => {
+      const h = Math.floor(total / 3600);
+      const m = Math.floor((total % 3600) / 60);
+      const s = total % 60;
+      return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+    };
+    return { hour, minute, second, slotInHour, slotOfDay, slotSecondsRemaining, hourSecondsRemaining,
+      slotCountdown: format(slotSecondsRemaining), hourCountdown: format(hourSecondsRemaining) };
+  }, [now]);
   const [otpSent, setOtpSent] = useState(false);
   const [phone, setPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
@@ -56,7 +79,7 @@ export function ProductionMarketplace() {
   const loadData = useCallback(async () => {
     if (!client) return;
     const [a, ownAds, schedule] = await Promise.all([
-      client.from('auctions').select('id,currency,starting_bid,current_bid,current_bidder_id,status,ends_at,advertisement_id,slot_number').in('status',['ACTIVE','AWAITING_PAYMENT']).order('ends_at',{ascending:true}).limit(30),
+      client.from('auctions').select('id,currency,starting_bid,current_bid,current_bidder_id,status,ends_at,advertisement_id,slot_number').in('status',['UPCOMING','ACTIVE','AWAITING_PAYMENT']).order('ends_at',{ascending:true}).limit(30),
       client.from('advertisements').select('id,brand_name,title,approval_status,ad_status,is_house_ad,media_url,media_type,website_url').eq('approval_status','APPROVED').eq('ad_status','ACTIVE').order('created_at',{ascending:false}),
       client.from('ad_slots').select('id,starts_at,ends_at,status,advertisement_id,slot_number').in('status',['LIVE','SCHEDULED']).order('starts_at',{ascending:true}).limit(30),
     ]);
@@ -204,8 +227,21 @@ export function ProductionMarketplace() {
           {liveAd ? <><div className="relative aspect-video bg-black">{liveAd.media_type?.startsWith('video/') ? <video src={liveAd.media_url} autoPlay muted playsInline className="h-full w-full object-contain"/> : <img src={liveAd.media_url} alt={liveAd.title} className="h-full w-full object-contain"/>}<div className="absolute right-4 top-4 rounded-xl bg-black/80 px-4 py-2 font-mono text-2xl font-black text-rose-400">00:{String(liveSeconds).padStart(2,'0')}</div></div><div className="flex flex-wrap items-center justify-between gap-4 p-5"><div><div className="text-xs font-black uppercase tracking-widest text-amber-400">{liveAd.brand_name}</div><h2 className="mt-1 text-2xl font-black">{liveAd.title}</h2></div><a href={liveAd.website_url} target="_blank" rel="noreferrer" className="rounded-xl bg-white px-5 py-3 font-black text-slate-950">Visit advertiser website ↗</a></div></> : <div className="p-10 text-center sm:p-16"><div className="text-xs font-black uppercase tracking-widest text-amber-400">60SEC LIVE BILLBOARD</div><h2 className="mt-3 text-2xl font-black sm:text-3xl">Your brand could be on air next</h2><p className="mt-2 text-sm text-slate-300">House advertisements rotate automatically until a paid, approved booking takes over.</p></div>}
         </div>
       </section>
-      <section className="max-w-5xl mx-auto space-y-4"><div className="flex flex-wrap items-end justify-between gap-2"><div><div className="text-xs font-black uppercase tracking-widest text-slate-500">Live bidding · public access</div><h2 className="mt-1 text-2xl font-black">UPCOMING SLOT AUCTIONS</h2></div><span className="text-xs text-slate-500">60 seconds per winning ad</span></div>
-        {auctions.length===0 ? <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">No active auctions are currently published. This section updates when auctions open.</div> : <div className="grid md:grid-cols-2 gap-4">{auctions.map(auction=><article key={auction.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3"><div className="flex justify-between gap-3"><div><div className="text-xs font-bold uppercase tracking-widest text-slate-500">Slot #{auction.slot_number}</div><div className="mt-1 text-sm text-slate-500">Closes {new Date(auction.ends_at).toLocaleTimeString('en-IN')}</div></div><span className="h-fit rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800">{label(auction.status)}</span></div><div className="text-3xl font-black">{money(Number(auction.current_bid ?? auction.starting_bid),auction.currency)}</div>{auction.status==='ACTIVE' ? <div className="space-y-2"><select className="w-full rounded-lg border p-2.5" value={selectedAds[auction.id]||''} onChange={e=>setSelectedAds(s=>({...s,[auction.id]:e.target.value}))}><option value="">Choose approved ad</option>{approvedAds.map(ad=><option key={ad.id} value={ad.id}>{ad.brand_name} — {ad.title}</option>)}</select><input type="number" min={Number(auction.current_bid ?? auction.starting_bid-1)+1} step="1" value={bidAmounts[auction.id]||''} onChange={e=>setBidAmounts(s=>({...s,[auction.id]:e.target.value}))} placeholder="Enter your bid" className="w-full rounded-lg border p-2.5"/><button disabled={!!busy || !selectedAds[auction.id] || !bidAmounts[auction.id]} onClick={()=>placeBid(auction)} className="w-full rounded-xl bg-slate-950 py-3 font-black text-white disabled:opacity-40">Confirm Bid</button><p className="text-xs text-slate-500">No login needed to watch. Sign in is requested only when you confirm your bid.</p></div> : auction.current_bidder_id===session?.user.id ? <button disabled={!!busy || !config.paymentsEnabled} onClick={()=>pay(auction)} className="w-full rounded-xl bg-emerald-700 py-3 font-bold text-white">Continue to payment</button> : <p className="text-sm text-slate-500">Waiting for winner payment confirmation.</p>}</article>)}</div>}
+      <section className="max-w-5xl mx-auto space-y-4">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-800"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"/> Perpetual auction clock · 24/7</div><h2 className="mt-1 text-xl font-black text-slate-950">LIVE HOURLY AUCTION</h2></div>
+            <span className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-bold text-white">NEVER CLOSES</span>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-white p-4"><div className="text-xs font-bold uppercase tracking-wider text-slate-500">Current slot · India day</div><div className="mt-1 font-mono text-3xl font-black text-slate-950">#{String(auctionClock.slotOfDay).padStart(4,'0')}</div><div className="text-xs text-slate-500">of 1,440 daily slots</div></div>
+            <div className="rounded-xl bg-white p-4"><div className="text-xs font-bold uppercase tracking-wider text-slate-500">Slot countdown · 60 seconds</div><div className="mt-1 font-mono text-3xl font-black text-emerald-700">{auctionClock.slotCountdown}</div><div className="text-xs text-slate-500">Slot {String(auctionClock.slotInHour).padStart(2,'0')} of 60 this hour</div></div>
+            <div className="rounded-xl bg-white p-4"><div className="text-xs font-bold uppercase tracking-wider text-slate-500">Hourly auction rolls over in</div><div className="mt-1 font-mono text-3xl font-black text-slate-950">{auctionClock.hourCountdown}</div><div className="text-xs text-slate-500">Hour {auctionClock.hour + 1} · Asia/Kolkata</div></div>
+          </div>
+          <p className="mt-3 text-xs text-emerald-900">Each hourly auction contains 60 sequential 60-second advertising slots. At the hour boundary, the next hourly cycle begins automatically; the marketplace stays open continuously.</p>
+        </div>
+        <div className="flex flex-wrap items-end justify-between gap-2"><div><div className="text-xs font-black uppercase tracking-widest text-slate-500">Live bidding · public access</div><h2 className="mt-1 text-2xl font-black">UPCOMING SLOT AUCTIONS</h2></div><span className="text-xs text-slate-500">60 slots per hour · 60 seconds each</span></div>
+        {auctions.length===0 ? <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">The perpetual clock is running. No database-backed slot auctions are published yet; bidding opens here as soon as the auction inventory is generated.</div> : <div className="grid md:grid-cols-2 gap-4">{auctions.map(auction=><article key={auction.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3"><div className="flex justify-between gap-3"><div><div className="text-xs font-bold uppercase tracking-widest text-slate-500">Slot #{auction.slot_number}</div><div className="mt-1 text-sm text-slate-500">Closes {new Date(auction.ends_at).toLocaleTimeString('en-IN')}</div></div><span className="h-fit rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800">{label(auction.status)}</span></div><div className="text-3xl font-black">{money(Number(auction.current_bid ?? auction.starting_bid),auction.currency)}</div>{auction.status==='ACTIVE' ? <div className="space-y-2"><select className="w-full rounded-lg border p-2.5" value={selectedAds[auction.id]||''} onChange={e=>setSelectedAds(s=>({...s,[auction.id]:e.target.value}))}><option value="">Choose approved ad</option>{approvedAds.map(ad=><option key={ad.id} value={ad.id}>{ad.brand_name} — {ad.title}</option>)}</select><input type="number" min={Number(auction.current_bid ?? auction.starting_bid-1)+1} step="1" value={bidAmounts[auction.id]||''} onChange={e=>setBidAmounts(s=>({...s,[auction.id]:e.target.value}))} placeholder="Enter your bid" className="w-full rounded-lg border p-2.5"/><button disabled={!!busy || !selectedAds[auction.id] || !bidAmounts[auction.id]} onClick={()=>placeBid(auction)} className="w-full rounded-xl bg-slate-950 py-3 font-black text-white disabled:opacity-40">Confirm Bid</button><p className="text-xs text-slate-500">No login needed to watch. Sign in is requested only when you confirm your bid.</p></div> : auction.current_bidder_id===session?.user.id ? <button disabled={!!busy || !config.paymentsEnabled} onClick={()=>pay(auction)} className="w-full rounded-xl bg-emerald-700 py-3 font-bold text-white">Continue to payment</button> : <p className="text-sm text-slate-500">Waiting for winner payment confirmation.</p>}</article>)}</div>}
       </section>
       <section id="how-it-works" className="border-y border-slate-200 py-10"><div className="max-w-5xl mx-auto"><h2 className="text-center text-3xl font-black">HOW 60SEC WORKS</h2><div className="mt-7 grid gap-4 sm:grid-cols-3">{[['01','Watch live','Ads and auction countdowns are public.'],['02','Confirm your bid','Sign in only when you confirm your bid.'],['03','Pay if you win','The winning advertiser completes secure checkout.']].map(x=><div key={x[0]} className="rounded-2xl border bg-slate-50 p-5"><div className="font-mono font-black text-slate-300">{x[0]}</div><h3 className="mt-2 font-bold">{x[1]}</h3><p className="mt-1 text-sm text-slate-600">{x[2]}</p></div>)}</div></div></section>
       <section id="advertise" className="py-6 text-center"><h2 className="text-xl font-black">WANT YOUR BRAND ON THE BILLBOARD?</h2><p className="mt-2 text-sm text-slate-600">Sign up from the navbar to submit an advertisement for approval.</p></section>
