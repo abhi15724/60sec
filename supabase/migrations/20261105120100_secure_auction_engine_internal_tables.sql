@@ -1,0 +1,14 @@
+alter table public.auction_cycles enable row level security;
+alter table public.auction_market_settings enable row level security;
+revoke all on public.auction_cycles from anon, authenticated;
+revoke all on public.auction_market_settings from anon, authenticated;
+revoke all on public.cashfree_webhook_events from anon, authenticated;
+revoke all on function public.rls_auto_enable() from public, anon, authenticated;
+revoke all on function public.ensure_auction_inventory(integer) from public, anon, authenticated;
+revoke all on function public.run_auction_clock() from public, anon, authenticated;
+revoke all on function public.place_auction_bid(text,uuid,uuid,numeric) from public, anon, authenticated;
+revoke all on function public.confirm_cashfree_payment(text,text,text) from public, anon, authenticated;
+grant execute on function public.ensure_auction_inventory(integer) to service_role;
+grant execute on function public.run_auction_clock() to service_role;
+grant execute on function public.place_auction_bid(text,uuid,uuid,numeric) to service_role;
+grant execute on function public.confirm_cashfree_payment(text,text,text) to service_role;
