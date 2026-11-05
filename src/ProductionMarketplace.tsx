@@ -79,7 +79,7 @@ export function ProductionMarketplace() {
   const loadData = useCallback(async () => {
     if (!client) return;
     const [a, ownAds, schedule] = await Promise.all([
-      client.from('auctions').select('id,currency,starting_bid,current_bid,current_bidder_id,status,ends_at,advertisement_id,slot_number').in('status',['ACTIVE','AWAITING_PAYMENT']).order('ends_at',{ascending:true}).limit(30),
+      client.from('auctions').select('id,currency,starting_bid,current_bid,current_bidder_id,status,ends_at,advertisement_id,slot_number').in('status',['UPCOMING','ACTIVE','AWAITING_PAYMENT']).order('ends_at',{ascending:true}).limit(30),
       client.from('advertisements').select('id,brand_name,title,approval_status,ad_status,is_house_ad,media_url,media_type,website_url').eq('approval_status','APPROVED').eq('ad_status','ACTIVE').order('created_at',{ascending:false}),
       client.from('ad_slots').select('id,starts_at,ends_at,status,advertisement_id,slot_number').in('status',['LIVE','SCHEDULED']).order('starts_at',{ascending:true}).limit(30),
     ]);
