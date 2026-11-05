@@ -42,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const customerPhone = String(user.phone || user.user_metadata?.phone || '').replace(/\D/g, '');
     const customerEmail = user.email;
     if (!customerEmail) return json(res, 400, { error: 'VERIFIED_CUSTOMER_EMAIL_REQUIRED' });
-    if (!/^\d{10,12}$/.test(customerPhone)) {
+    if (!/^\d{8,15}$/.test(customerPhone)) {
       return json(res, 400, { error: 'VERIFIED_CUSTOMER_PHONE_REQUIRED' });
     }
     const orderId = existing?.provider_order_id || makeOrderId(auctionId);
