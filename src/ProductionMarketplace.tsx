@@ -15,6 +15,7 @@ export function ProductionMarketplace() {
   const [client, setClient] = useState<SupabaseClient|null>(null);
   const [session, setSession] = useState<Session|null>(null);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin'|'signup'>('signin');
   const [pendingBid, setPendingBid] = useState<{auctionId:string; advertisementId:string; amount:number}|null>(null);
@@ -118,10 +119,24 @@ export function ProductionMarketplace() {
 
   const sendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault(); if (!client) return;
+    if (password.length < 8) return setError('Password must be at least 8 characters.');
     setBusy('auth'); setError(''); setNotice('');
-    const {error: authError} = await client.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:window.location.origin, shouldCreateUser:authMode === 'signup'}});
+    const result = authMode === 'signup'
+      ? await client.auth.signUp({email:email.trim(),password,options:{emailRedirectTo:window.location.origin}})
+      : await client.auth.signInWithPassword({email:email.trim(),password});
     setBusy('');
-    if (authError) setError(authError.message); else { setOtpSent(true); setNotice(authMode === 'signup' ? 'Check your email to complete your 60SEC account registration.' : 'Check your email for the secure sign-in link.'); }
+    if (result.error) setError(result.error.message);
+    else if (authMode === 'signup' && !result.data.session) {
+      setNotice('Account created. Email confirmation is enabled in Supabase, so check your inbox to verify. To allow instant access, disable Confirm email in Supabase Auth settings.');
+    } else {
+      setAuthOpen(false); setPassword(''); setOtpSent(false);
+      setNotice(authMode === 'signup' ? 'Your 60SEC account is ready.' : 'You are signed in.');
+      if (pendingBid) {
+        const queued = pendingBid; setPendingBid(null);
+        const auction = auctions.find(a => a.id === queued.auctionId);
+        if (auction) { setSelectedAds(s=>({...s,[queued.auctionId]:queued.advertisementId})); setBidAmounts(s=>({...s,[queued.auctionId]:String(queued.amount)})); }
+      }
+    }
   };
 
   const sendPhoneCode = async () => {
@@ -254,7 +269,7 @@ export function ProductionMarketplace() {
       </section>
       <section id="how-it-works" className="border-y border-slate-200 py-10"><div className="max-w-5xl mx-auto"><h2 className="text-center text-3xl font-black">HOW 60SEC WORKS</h2><div className="mt-7 grid gap-4 sm:grid-cols-3">{[['01','Watch live','Ads and auction countdowns are public.'],['02','Confirm your bid','Sign in only when you confirm your bid.'],['03','Pay if you win','The winning advertiser completes secure checkout.']].map(x=><div key={x[0]} className="rounded-2xl border bg-slate-50 p-5"><div className="font-mono font-black text-slate-300">{x[0]}</div><h3 className="mt-2 font-bold">{x[1]}</h3><p className="mt-1 text-sm text-slate-600">{x[2]}</p></div>)}</div></div></section>
       <section id="advertise" className="py-6 text-center"><h2 className="text-xl font-black">WANT YOUR BRAND ON THE BILLBOARD?</h2><p className="mt-2 text-sm text-slate-600">Sign up from the navbar to submit an advertisement for approval.</p></section>
-      {authOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4" onClick={()=>setAuthOpen(false)}><form onSubmit={sendMagicLink} onClick={e=>e.stopPropagation()} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between"><div><h2 className="text-xl font-black">{authMode==='signup'?'Create your 60SEC account':'Sign in to confirm your bid'}</h2><p className="mt-1 text-sm text-slate-500">Your selected bid will be ready after authentication.</p></div><button type="button" onClick={()=>setAuthOpen(false)}>×</button></div><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com" className="w-full rounded-xl border px-3 py-3"/><button disabled={busy==='auth'} className="w-full rounded-xl bg-slate-950 py-3 font-bold text-white">{busy==='auth'?'Sending…':'Email me a secure link'}</button>{otpSent&&<p className="text-xs text-emerald-700">Check your email and open the link to continue.</p>}<p className="text-center text-xs text-slate-500">New to 60SEC? <button type="button" className="font-bold underline" onClick={()=>setAuthMode(authMode==='signup'?'signin':'signup')}>{authMode==='signup'?'Sign in':'Create an account'}</button></p></form></div>}
+      {authOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4" onClick={()=>setAuthOpen(false)}><form onSubmit={sendMagicLink} onClick={e=>e.stopPropagation()} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between"><div><h2 className="text-xl font-black">{authMode==='signup'?'Create your 60SEC account':'Welcome back to 60SEC'}</h2><p className="mt-1 text-sm text-slate-500">Use your email and password to get started—no sign-in link required.</p></div><button type="button" onClick={()=>setAuthOpen(false)}>×</button></div><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com" autoComplete="email" className="w-full rounded-xl border px-3 py-3"/><input type="password" required minLength={8} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password (at least 8 characters)" autoComplete={authMode==='signup'?'new-password':'current-password'} className="w-full rounded-xl border px-3 py-3"/><button disabled={busy==='auth'} className="w-full rounded-xl bg-slate-950 py-3 font-bold text-white">{busy==='auth'?(authMode==='signup'?'Creating account…':'Signing in…'):(authMode==='signup'?'Create account':'Sign in')}</button>{otpSent&&<p className="text-xs text-emerald-700">Check your email and open the link to continue.</p>}<p className="text-center text-xs text-slate-500">{authMode==='signup'?'Already have an account?':'New to 60SEC?'} <button type="button" className="font-bold underline" onClick={()=>{setAuthMode(authMode==='signup'?'signin':'signup');setError('');}}>{authMode==='signup'?'Sign in':'Create an account'}</button></p></form></div>}
       </>
       {session && <>
         {!session.user.phone && <section className="bg-white border border-amber-200 rounded-2xl p-5 space-y-3"><h2 className="font-bold">Verify your phone before payment</h2><p className="text-sm text-slate-600">Cashfree requires a customer phone number. Verify it with an SMS code; the server uses the verified Supabase phone claim.</p><div className="flex flex-wrap gap-2"><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+919876543210" className="flex-1 min-w-56 border rounded-lg p-2"/><button disabled={busy==='phone'} onClick={sendPhoneCode} className="bg-slate-950 text-white rounded-lg px-4 py-2 disabled:opacity-50">{phoneOtpSent?'Resend code':'Send SMS code'}</button></div>{phoneOtpSent && <div className="flex gap-2"><input value={phoneCode} onChange={e=>setPhoneCode(e.target.value)} placeholder="SMS code" className="flex-1 border rounded-lg p-2"/><button disabled={busy==='phone'} onClick={verifyPhoneCode} className="bg-emerald-700 text-white rounded-lg px-4 py-2">Verify phone</button></div>}</section>}
