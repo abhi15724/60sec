@@ -16,6 +16,9 @@ export function ProductionMarketplace() {
   const [session, setSession] = useState<Session|null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [recoveryMode, setRecoveryMode] = useState(false);
   const [fullName, setFullName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
   const [country, setCountry] = useState('India');
@@ -76,7 +79,14 @@ export function ProductionMarketplace() {
         const sb = createClient(c.supabaseUrl, c.supabaseAnonKey);
         setClient(sb);
         sb.auth.getSession().then(({data}) => { if (alive) setSession(data.session); });
-        const { data: listener } = sb.auth.onAuthStateChange((_event, next) => { if (alive) setSession(next); });
+        const { data: listener } = sb.auth.onAuthStateChange((event, next) => {
+          if (!alive) return;
+          setSession(next);
+          if (event === 'PASSWORD_RECOVERY') {
+            setRecoveryMode(true); setAuthMode('signin'); setAuthOpen(true);
+            setPassword(''); setError(''); setNotice('Choose a new password for your 60SEC account.');
+          }
+        });
         unsubscribe = () => listener.subscription.unsubscribe();
       }
     }).catch(() => setError('Could not load production configuration.'));
@@ -121,6 +131,36 @@ export function ProductionMarketplace() {
     return data;
   };
 
+  const sendPasswordReset = async () => {
+    if (!client) return setError('Password recovery is temporarily unavailable. Please refresh and try again.');
+    if (!email.trim()) return setError('Enter your account email first.');
+    setBusy('recovery'); setError(''); setNotice('');
+    try {
+      const { error: resetError } = await client.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/` });
+      if (resetError) throw resetError;
+      setNotice('If an account exists for this email, a secure password-reset link has been sent. Check your inbox and spam folder.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send the password-reset email. Please try again.');
+    } finally { setBusy(''); }
+  };
+
+  const updateRecoveredPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!client) return setError('Password update is temporarily unavailable. Please refresh and try again.');
+    if (newPassword.length < 8) return setError('Your new password must be at least 8 characters.');
+    if (newPassword !== confirmPassword) return setError('The passwords do not match.');
+    setBusy('recovery'); setError(''); setNotice('');
+    try {
+      const { data, error: updateError } = await client.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+      if (data.user) { const { data: refreshed } = await client.auth.getSession(); setSession(refreshed.session); }
+      setRecoveryMode(false); setNewPassword(''); setConfirmPassword(''); setPassword(''); setAuthOpen(false);
+      setNotice('Your password has been updated. You can now sign in with your new password.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update your password. Request a new reset link and try again.');
+    } finally { setBusy(''); }
+  };
+
   const sendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client) return setError('Signup is temporarily unavailable. Please refresh and try again.');
@@ -132,7 +172,17 @@ export function ProductionMarketplace() {
       const result = authMode === 'signup'
         ? await client.auth.signUp({email:email.trim(),password,options:{emailRedirectTo:window.location.origin,data:{full_name:fullName.trim(),phone_number:signupPhone.trim(),country,timezone:visitorTimeZone}}})
         : await client.auth.signInWithPassword({email:email.trim(),password});
-      if (result.error) { setError(result.error.message); return; }
+      if (result.error) {
+        const message = result.error.message.toLowerCase();
+        if (authMode === 'signup' && (message.includes('already registered') || message.includes('already exists'))) setError('An account with this email already exists. Choose Sign In, or use Forgot password if you cannot remember your password.');
+        else if (authMode === 'signin' && (message.includes('invalid login credentials') || message.includes('invalid credentials'))) setError('Email or password is incorrect. Check your details or use Forgot password to reset your password.');
+        else setError(result.error.message);
+        return;
+      }
+      if (authMode === 'signup' && result.data.user?.identities?.length === 0) {
+        setError('An account with this email already exists. Choose Sign In, or use Forgot password if you cannot remember your password.');
+        return;
+      }
       if (authMode === 'signup' && result.data.user && !result.data.session) {
         if (result.data.user.identities?.length === 0) {
           setError('An account with this email already exists. Switch to Sign In and use your password.');
@@ -284,7 +334,7 @@ export function ProductionMarketplace() {
       </section>
       <section id="how-it-works" className="border-y border-slate-200 py-10"><div className="max-w-5xl mx-auto"><h2 className="text-center text-3xl font-black">HOW 60SEC WORKS</h2><div className="mt-7 grid gap-4 sm:grid-cols-3">{[['01','Watch live','Ads and auction countdowns are public.'],['02','Confirm your bid','Sign in only when you confirm your bid.'],['03','Pay if you win','The winning advertiser completes secure checkout.']].map(x=><div key={x[0]} className="rounded-2xl border bg-slate-50 p-5"><div className="font-mono font-black text-slate-300">{x[0]}</div><h3 className="mt-2 font-bold">{x[1]}</h3><p className="mt-1 text-sm text-slate-600">{x[2]}</p></div>)}</div></div></section>
       <section id="advertise" className="py-6 text-center"><h2 className="text-xl font-black">WANT YOUR BRAND ON THE BILLBOARD?</h2><p className="mt-2 text-sm text-slate-600">Sign up from the navbar to submit an advertisement for approval.</p></section>
-      {authOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4" onClick={()=>setAuthOpen(false)}><form onSubmit={sendMagicLink} onClick={e=>e.stopPropagation()} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between"><div><h2 className="text-xl font-black">{authMode==='signup'?'Create your 60SEC account':'Welcome back to 60SEC'}</h2><p className="mt-1 text-sm text-slate-500">Use your email and password to get started—no sign-in link required.</p></div><button type="button" onClick={()=>setAuthOpen(false)}>×</button></div>{error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}{notice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p>}{authMode==='signup' && <><input type="text" required value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Full name" autoComplete="name" className="w-full rounded-xl border px-3 py-3"/><input type="tel" required value={signupPhone} onChange={e=>setSignupPhone(e.target.value)} placeholder="Phone number (include country code, e.g. +919876543210)" autoComplete="tel" className="w-full rounded-xl border px-3 py-3"/><select required value={country} onChange={e=>setCountry(e.target.value)} autoComplete="country-name" className="w-full rounded-xl border px-3 py-3"><option value="India">India</option><option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option><option value="Australia">Australia</option><option value="United Arab Emirates">United Arab Emirates</option><option value="Singapore">Singapore</option><option value="Germany">Germany</option><option value="France">France</option><option value="Japan">Japan</option><option value="Other">Other</option></select><p className="text-xs text-slate-500">Auction times are automatically shown in your device timezone: {visitorTimeZone}.</p></>}<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com" autoComplete="email" className="w-full rounded-xl border px-3 py-3"/><input type="password" required minLength={8} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password (at least 8 characters)" autoComplete={authMode==='signup'?'new-password':'current-password'} className="w-full rounded-xl border px-3 py-3"/><button disabled={busy==='auth'} className="w-full rounded-xl bg-slate-950 py-3 font-bold text-white">{busy==='auth'?(authMode==='signup'?'Creating account…':'Signing in…'):(authMode==='signup'?'Create account':'Sign in')}</button>{otpSent&&<p className="text-xs text-emerald-700">Check your email and open the link to continue.</p>}<p className="text-center text-xs text-slate-500">{authMode==='signup'?'Already have an account?':'New to 60SEC?'} <button type="button" className="font-bold underline" onClick={()=>{setAuthMode(authMode==='signup'?'signin':'signup');setError('');}}>{authMode==='signup'?'Sign in':'Create an account'}</button></p></form></div>}
+      {authOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4" onClick={()=>setAuthOpen(false)}><form onSubmit={recoveryMode ? updateRecoveredPassword : sendMagicLink} onClick={e=>e.stopPropagation()} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between"><div><h2 className="text-xl font-black">{recoveryMode ? 'Set a new password' : authMode==='signup'?'Create your 60SEC account':'Welcome back to 60SEC'}</h2><p className="mt-1 text-sm text-slate-500">{recoveryMode ? 'Choose a strong password to secure your account.' : 'Use your email and password to get started—no sign-in link required.'}</p></div><button type="button" onClick={()=>setAuthOpen(false)}>×</button></div>{error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}{notice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p>}{!recoveryMode && authMode==='signup' && <><input type="text" required value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Full name" autoComplete="name" className="w-full rounded-xl border px-3 py-3"/><input type="tel" required value={signupPhone} onChange={e=>setSignupPhone(e.target.value)} placeholder="Phone number (include country code, e.g. +919876543210)" autoComplete="tel" className="w-full rounded-xl border px-3 py-3"/><select required value={country} onChange={e=>setCountry(e.target.value)} autoComplete="country-name" className="w-full rounded-xl border px-3 py-3"><option value="India">India</option><option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option><option value="Australia">Australia</option><option value="United Arab Emirates">United Arab Emirates</option><option value="Singapore">Singapore</option><option value="Germany">Germany</option><option value="France">France</option><option value="Japan">Japan</option><option value="Other">Other</option></select><p className="text-xs text-slate-500">Auction times are automatically shown in your device timezone: {visitorTimeZone}.</p></>}<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com" autoComplete="email" className="w-full rounded-xl border px-3 py-3"/>{recoveryMode ? <><input type="password" required minLength={8} value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="New password (at least 8 characters)" autoComplete="new-password" className="w-full rounded-xl border px-3 py-3"/><input type="password" required minLength={8} value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder="Confirm new password" autoComplete="new-password" className="w-full rounded-xl border px-3 py-3"/></> : <input type="password" required minLength={8} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password (at least 8 characters)" autoComplete={authMode==='signup'?'new-password':'current-password'} className="w-full rounded-xl border px-3 py-3"/>}<button disabled={busy==='auth' || busy==='recovery'} className="w-full rounded-xl bg-slate-950 py-3 font-bold text-white">{busy==='auth'?(authMode==='signup'?'Creating account…':'Signing in…'):busy==='recovery'?(recoveryMode?'Updating password…':'Sending reset link…'):recoveryMode?'Update password':authMode==='signup'?'Create account':'Sign in'}</button>{otpSent&&<p className="text-xs text-emerald-700">Check your email and open the link to continue.</p>}{!recoveryMode && authMode==='signin' && <div className="text-center"><button type="button" disabled={busy==='recovery'} className="text-sm font-bold text-slate-700 underline disabled:opacity-50" onClick={sendPasswordReset}>{busy==='recovery'?'Sending reset link…':'Forgot password?'}</button></div>}{!recoveryMode && <p className="text-center text-xs text-slate-500">{authMode==='signup'?'Already have an account?':'New to 60SEC?'} <button type="button" className="font-bold underline" onClick={()=>{setAuthMode(authMode==='signup'?'signin':'signup');setError('');setNotice('');}}>{authMode==='signup'?'Sign in':'Create an account'}</button></p>}{recoveryMode && <p className="text-center text-xs text-slate-500">If the reset link expired, close this window and request a new one.</p>}</form></div>}
       </>
       {session && <>
         {!session.user.phone && <section className="bg-white border border-amber-200 rounded-2xl p-5 space-y-3"><h2 className="font-bold">Verify your phone before payment</h2><p className="text-sm text-slate-600">Cashfree requires a customer phone number. Verify it with an SMS code; the server uses the verified Supabase phone claim.</p><div className="flex flex-wrap gap-2"><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+919876543210" className="flex-1 min-w-56 border rounded-lg p-2"/><button disabled={busy==='phone'} onClick={sendPhoneCode} className="bg-slate-950 text-white rounded-lg px-4 py-2 disabled:opacity-50">{phoneOtpSent?'Resend code':'Send SMS code'}</button></div>{phoneOtpSent && <div className="flex gap-2"><input value={phoneCode} onChange={e=>setPhoneCode(e.target.value)} placeholder="SMS code" className="flex-1 border rounded-lg p-2"/><button disabled={busy==='phone'} onClick={verifyPhoneCode} className="bg-emerald-700 text-white rounded-lg px-4 py-2">Verify phone</button></div>}</section>}
