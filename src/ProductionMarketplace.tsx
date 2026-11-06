@@ -33,6 +33,10 @@ export function ProductionMarketplace() {
     const slotOfDay = hour * 60 + slotInHour;
     const slotSecondsRemaining = 60 - second;
     const hourSecondsRemaining = 3600 - (minute * 60 + second);
+    // India remains the canonical auction calendar; convert its actual hour boundaries
+    // for display only. This keeps slot identity/countdown globally aligned.
+    const hourStart = new Date(now - (minute * 60 + second) * 1000 - (now % 1000));
+    const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000);
     const format = (total: number) => {
       const h = Math.floor(total / 3600);
       const m = Math.floor((total % 3600) / 60);
@@ -40,7 +44,7 @@ export function ProductionMarketplace() {
       return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
     };
     return { hour, minute, second, slotInHour, slotOfDay, slotSecondsRemaining, hourSecondsRemaining,
-      slotCountdown: format(slotSecondsRemaining), hourCountdown: format(hourSecondsRemaining) };
+      hourStart, hourEnd, slotCountdown: format(slotSecondsRemaining), hourCountdown: format(hourSecondsRemaining) };
   }, [now]);
   const [otpSent, setOtpSent] = useState(false);
   const [phone, setPhone] = useState('');
@@ -234,9 +238,14 @@ export function ProductionMarketplace() {
             <span className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-bold text-white">NEVER CLOSES</span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl bg-white p-4"><div className="text-xs font-bold uppercase tracking-wider text-slate-500">Current slot · India day</div><div className="mt-1 font-mono text-3xl font-black text-slate-950">#{String(auctionClock.slotOfDay).padStart(4,'0')}</div><div className="text-xs text-slate-500">of 1,440 daily slots</div></div>
+            <div className="rounded-xl bg-white p-4"><div className="text-xs font-bold uppercase tracking-wider text-slate-500">Current slot · India auction day</div><div className="mt-1 font-mono text-3xl font-black text-slate-950">#{String(auctionClock.slotOfDay).padStart(4,'0')}</div><div className="text-xs text-slate-500">of 1,440 daily slots · same slot worldwide</div></div>
             <div className="rounded-xl bg-white p-4"><div className="text-xs font-bold uppercase tracking-wider text-slate-500">Slot countdown · 60 seconds</div><div className="mt-1 font-mono text-3xl font-black text-emerald-700">{auctionClock.slotCountdown}</div><div className="text-xs text-slate-500">Slot {String(auctionClock.slotInHour).padStart(2,'0')} of 60 this hour</div></div>
-            <div className="rounded-xl bg-white p-4"><div className="text-xs font-bold uppercase tracking-wider text-slate-500">Hourly auction rolls over in</div><div className="mt-1 font-mono text-3xl font-black text-slate-950">{auctionClock.hourCountdown}</div><div className="text-xs text-slate-500">Hour {auctionClock.hour + 1} · Asia/Kolkata</div></div>
+            <div className="rounded-xl bg-white p-4"><div className="text-xs font-bold uppercase tracking-wider text-slate-500">Hourly auction rolls over in</div><div className="mt-1 font-mono text-3xl font-black text-slate-950">{auctionClock.hourCountdown}</div><div className="text-xs text-slate-500">Your local time · {Intl.DateTimeFormat().resolvedOptions().timeZone || 'local timezone'}</div></div>
+          </div>
+          <div className="mt-3 rounded-xl bg-white/80 px-4 py-3 text-sm text-slate-700">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">This auction hour · your local time</div>
+            <div className="mt-1 font-semibold">{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(auctionClock.hourStart)} – {new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(auctionClock.hourEnd)}</div>
+            <div className="text-xs text-slate-500">Displayed in your device timezone. The global auction clock and slot boundaries stay synchronized to the India auction calendar.</div>
           </div>
           <p className="mt-3 text-xs text-emerald-900">Each hourly auction contains 60 sequential 60-second advertising slots. At the hour boundary, the next hourly cycle begins automatically; the marketplace stays open continuously.</p>
         </div>
